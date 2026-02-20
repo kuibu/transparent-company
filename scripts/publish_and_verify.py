@@ -33,6 +33,7 @@ def main() -> None:
     print("Published disclosure:")
     print(json.dumps(payload, indent=2, ensure_ascii=False))
 
+    verify_public_key = payload.get("signer_public_key") or payload.get("agent_public_key")
     cmd = [
         sys.executable,
         "scripts/verify_disclosure.py",
@@ -42,9 +43,10 @@ def main() -> None:
         payload["disclosure_id"],
         "--metric-key",
         args.metric_key,
-        "--public-key",
-        payload["agent_public_key"],
     ]
+    if verify_public_key:
+        cmd.extend(["--public-key", verify_public_key])
+
     if payload.get("grouped_metrics"):
         first_group = payload["grouped_metrics"][0].get("group", {})
         if first_group:

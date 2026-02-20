@@ -6,6 +6,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.core.key_management import expected_signer_role
 from app.core.security import Actor, create_one_time_token, verify_one_time_token
 from app.disclosure.commitment import proof_lookup_key
 from app.ledger.events import EventCreateRequest
@@ -83,7 +84,6 @@ class SelectiveDisclosureService:
             },
             tool_trace={"token_exp": claims.get("exp")},
         )
-        signer_role = "human" if actor.type == "human" else "agent"
-        LedgerStore(self.session).append(req, signer=load_role_key(signer_role))
+        LedgerStore(self.session).append(req, signer=load_role_key(expected_signer_role(actor.type)))
 
         return response

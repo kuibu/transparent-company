@@ -8,6 +8,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.api.utils import now_utc
+from app.core.key_management import expected_signer_role
 from app.core.security import Actor
 from app.disclosure.commitment import build_commitments
 from app.disclosure.compute import compute_disclosure
@@ -64,6 +65,8 @@ def publish_disclosure_run(
     policy = get_policy(policy_id)
     period_start_utc = _as_utc(period_start)
     period_end_utc = _as_utc(period_end)
+    signer = load_role_key(expected_signer_role(actor.type))
+
     all_events = list(session.scalars(select(LedgerEventModel).order_by(LedgerEventModel.seq_id.asc())).all())
     period_events = [event for event in all_events if period_start_utc <= _as_utc(event.occurred_at) < period_end_utc]
 
@@ -113,15 +116,17 @@ def publish_disclosure_run(
         root_summary=commitments.root_summary,
         root_details=commitments.root_details,
         proof_level=policy.proof_level,
+        signer_role=signer.key_id,
+        signer_public_key=signer.public_key_b64,
         leaf_payloads=commitments.leaf_payloads,
     )
+
     reconciliation_results = run_minimum_reconciliation(
         events=period_events,
         disclosed_revenue_cents=int(computation.metrics.get("revenue_cents", 0)),
         pnl_report=pnl_report,
     )
     statement["reconciliation"] = [result.__dict__ for result in reconciliation_results]
-    signer = load_role_key("agent")
     statement_signature, sig_hash = sign_statement(statement, signer)
 
     anchor_ref = AnchoringService(session).anchor_disclosure(
@@ -149,8 +154,6 @@ def publish_disclosure_run(
         created_at=now_utc(),
     )
     session.add(run)
-    # Session autoflush is disabled globally; ensure parent row exists before
-    # inserting child rows constrained by FK(disclosure_id).
     session.flush()
 
     session.execute(delete(DisclosureMetricModel).where(DisclosureMetricModel.disclosure_id == disclosure_id))
@@ -195,6 +198,9 @@ def publish_disclosure_run(
         "root_details": commitments.root_details,
         "statement": statement,
         "statement_signature": statement_signature,
+        "signer_role": signer.key_id,
+        "signer_public_key": signer.public_key_b64,
+        # backward-compatible field for old clients/scripts.
         "agent_public_key": signer.public_key_b64,
         "anchor_ref": anchor_ref,
     }

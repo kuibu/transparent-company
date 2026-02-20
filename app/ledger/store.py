@@ -7,6 +7,8 @@ from typing import Iterable
 from sqlalchemy import Select, desc, select
 from sqlalchemy.orm import Session
 
+from app.core.key_management import assert_signer_matches_actor
+from app.governance import PolicyEnforcementError, get_governance_engine
 from app.ledger.canonical import sha256_hex
 from app.ledger.events import EventCreateRequest, LedgerEvent
 from app.ledger.signing import KeyMaterial, sign_object
@@ -50,8 +52,33 @@ class LedgerStore:
         }
 
     def append(self, request: EventCreateRequest, signer: KeyMaterial) -> LedgerEventModel:
+        try:
+            assert_signer_matches_actor(request.actor.type, signer.key_id)
+        except ValueError as exc:
+            raise PolicyEnforcementError(str(exc)) from exc
+
+        governance = get_governance_engine()
+        raw_approvals = (request.tool_trace or {}).get("approvals", [])
+        approvals = [str(x) for x in raw_approvals] if isinstance(raw_approvals, list) else []
+        decision = governance.evaluate(
+            action=f"event:{request.event_type}",
+            actor_type=request.actor.type,
+            signer_role=signer.key_id,
+            payload=request.payload,
+            tool_trace=request.tool_trace,
+            approvals=approvals,
+        )
+        if not decision.allowed:
+            raise PolicyEnforcementError(decision.reason)
+
         prev_hash = self._latest_event_hash()
         event = request.to_ledger_event(prev_hash=prev_hash)
+
+        # Persist governance decision with each event for replayable rule audits.
+        event_tool_trace = dict(event.tool_trace)
+        event_tool_trace["governance"] = decision.to_audit_dict()
+        event.tool_trace = event_tool_trace
+
         sign_payload = {
             "event_id": str(event.event_id),
             "event_type": event.event_type,

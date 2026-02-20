@@ -16,6 +16,8 @@ def build_statement(
     root_summary: str,
     root_details: str | None,
     proof_level: str,
+    signer_role: str,
+    signer_public_key: str,
     leaf_payloads: list[dict] | None = None,
 ) -> dict:
     return {
@@ -25,6 +27,11 @@ def build_statement(
         "period": period,
         "metrics": metrics,
         "grouped_metrics": grouped_metrics,
+        "signer": {
+            "role": signer_role,
+            "algorithm": "Ed25519",
+            "public_key_b64": signer_public_key,
+        },
         "commitments": {
             "root_summary": root_summary,
             "root_details": root_details,

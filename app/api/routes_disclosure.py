@@ -77,6 +77,8 @@ def get_disclosure(disclosure_id: str, session: Session = Depends(get_session)):
     run = session.get(DisclosureRunModel, disclosure_id)
     if not run:
         raise HTTPException(status_code=404, detail="disclosure not found")
+
+    signer = (run.statement_json or {}).get("signer", {})
     return {
         "disclosure_id": run.disclosure_id,
         "policy_id": run.policy_id,
@@ -89,6 +91,8 @@ def get_disclosure(disclosure_id: str, session: Session = Depends(get_session)):
         "root_details": run.root_details,
         "statement": run.statement_json,
         "statement_signature": run.statement_signature,
+        "signer_role": signer.get("role"),
+        "signer_public_key": signer.get("public_key_b64"),
         "anchor_ref": run.anchor_ref,
     }
 

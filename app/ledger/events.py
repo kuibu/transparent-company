@@ -107,6 +107,29 @@ class SelectiveDisclosureRevealedPayload(BaseModel):
     challenge_subject: str
 
 
+class OrchestratorStateChangedPayload(BaseModel):
+    run_id: str
+    workflow_name: str
+    from_state: str | None = None
+    to_state: str
+    reason: str | None = None
+
+
+class ToolInvocationLoggedPayload(BaseModel):
+    run_id: str
+    task_id: str
+    connector: str
+    action: str
+    status: Literal["success", "failed"]
+    attempt: int = Field(ge=1)
+    timeout_seconds: int = Field(ge=1)
+    max_retries: int = Field(ge=0)
+    request_hash: str
+    response_hash: str | None = None
+    error: str | None = None
+    governance: dict[str, Any] = Field(default_factory=dict)
+
+
 PAYLOAD_MODELS: dict[str, type[BaseModel]] = {
     "ProcurementOrdered": ProcurementOrderedPayload,
     "GoodsReceived": GoodsReceivedPayload,
@@ -117,6 +140,8 @@ PAYLOAD_MODELS: dict[str, type[BaseModel]] = {
     "InventoryAdjusted": InventoryAdjustedPayload,
     "DisclosurePublished": DisclosurePublishedPayload,
     "SelectiveDisclosureRevealed": SelectiveDisclosureRevealedPayload,
+    "OrchestratorStateChanged": OrchestratorStateChangedPayload,
+    "ToolInvocationLogged": ToolInvocationLoggedPayload,
 }
 
 

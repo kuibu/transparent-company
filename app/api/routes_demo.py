@@ -190,12 +190,16 @@ def demo_seed(session: Session = Depends(get_session)):
             "disclosure_id": public_result.disclosure_id,
             "root_summary": public_result.payload["root_summary"],
             "root_details": public_result.payload["root_details"],
+            "signer_role": public_result.payload["signer_role"],
+            "signer_public_key": public_result.payload["signer_public_key"],
             "agent_public_key": public_result.payload["agent_public_key"],
         },
         "investor_disclosure": {
             "disclosure_id": investor_result.disclosure_id,
             "root_summary": investor_result.payload["root_summary"],
             "root_details": investor_result.payload["root_details"],
+            "signer_role": investor_result.payload["signer_role"],
+            "signer_public_key": investor_result.payload["signer_public_key"],
             "agent_public_key": investor_result.payload["agent_public_key"],
         },
         "how_to_verify": {
