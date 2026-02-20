@@ -1,3 +1,5 @@
+name: transparent-company
+
 services:
   postgres:
     image: postgres:16
@@ -69,7 +71,7 @@ services:
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   superset:
-    image: touming-superset:4.1.1-local
+    image: transparent-company-superset:4.1.1-local
     build:
       context: .
       dockerfile: app/dashboard/superset/Dockerfile
@@ -94,7 +96,7 @@ services:
     command: /bin/sh -c "superset run -h 0.0.0.0 -p 8088"
 
   superset-init:
-    image: touming-superset:4.1.1-local
+    image: transparent-company-superset:4.1.1-local
     build:
       context: .
       dockerfile: app/dashboard/superset/Dockerfile
