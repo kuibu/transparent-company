@@ -1,0 +1,120 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: tc
+      POSTGRES_USER: tc
+      POSTGRES_PASSWORD: tc
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tc -d tc"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  immudb:
+    image: codenotary/immudb:latest
+    environment:
+      IMMUDB_ADMIN_PASSWORD: immudb
+    ports:
+      - "3322:3322"
+      - "8090:8080"
+    volumes:
+      - immudb_data:/var/lib/immudb
+
+  minio:
+    image: minio/minio:RELEASE.2025-01-20T14-49-07Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      TC_DATABASE_URL: postgresql+psycopg2://tc:tc@postgres:5432/tc
+      TC_ANCHOR_MODE: immudb_py
+      TC_IMMUDB_ADDRESS: immudb
+      TC_IMMUDB_PORT: 3322
+      TC_IMMUDB_USER: immudb
+      TC_IMMUDB_PASSWORD: immudb
+      TC_IMMUDB_DATABASE: defaultdb
+      TC_RECEIPT_BACKEND: minio
+      TC_MINIO_ENDPOINT: minio:9000
+      TC_MINIO_ACCESS_KEY: minioadmin
+      TC_MINIO_SECRET_KEY: minioadmin
+      TC_MINIO_BUCKET: receipts
+      TC_MINIO_SECURE: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      immudb:
+        condition: service_started
+      minio:
+        condition: service_started
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./:/workspace
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  superset:
+    image: touming-superset:4.1.1-local
+    build:
+      context: .
+      dockerfile: app/dashboard/superset/Dockerfile
+    environment:
+      SUPERSET_ENV: production
+      SUPERSET_SECRET_KEY: transparent-company-superset-secret
+      SUPERSET_CONFIG_PATH: /app/pythonpath/superset_config.py
+      SUPERSET_ADMIN_USERNAME: admin
+      SUPERSET_ADMIN_PASSWORD: admin
+      SUPERSET_ANALYTICS_DB_NAME: TransparentCompanyPG
+      SUPERSET_ANALYTICS_DB_URI: postgresql+psycopg2://tc:tc@postgres:5432/tc
+    depends_on:
+      postgres:
+        condition: service_healthy
+      superset-init:
+        condition: service_completed_successfully
+    ports:
+      - "8088:8088"
+    volumes:
+      - ./app/dashboard/superset/superset_config.py:/app/pythonpath/superset_config.py
+      - superset_home:/app/superset_home
+    command: /bin/sh -c "superset run -h 0.0.0.0 -p 8088"
+
+  superset-init:
+    image: touming-superset:4.1.1-local
+    build:
+      context: .
+      dockerfile: app/dashboard/superset/Dockerfile
+    environment:
+      SUPERSET_SECRET_KEY: transparent-company-superset-secret
+      SUPERSET_CONFIG_PATH: /app/pythonpath/superset_config.py
+      SUPERSET_ADMIN_USERNAME: admin
+      SUPERSET_ADMIN_PASSWORD: admin
+      SUPERSET_ANALYTICS_DB_NAME: TransparentCompanyPG
+      SUPERSET_ANALYTICS_DB_URI: postgresql+psycopg2://tc:tc@postgres:5432/tc
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./app/dashboard/superset/superset_config.py:/app/pythonpath/superset_config.py
+      - superset_home:/app/superset_home
+    command: /bin/bash /app/init_superset.sh
+
+volumes:
+  pg_data:
+  immudb_data:
+  minio_data:
+  superset_home:
