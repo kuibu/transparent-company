@@ -130,6 +130,14 @@ class ToolInvocationLoggedPayload(BaseModel):
     governance: dict[str, Any] = Field(default_factory=dict)
 
 
+class DemoScenarioInitializedPayload(BaseModel):
+    scenario_id: str
+    scenario_version: str
+    seeded_at: str
+    key_event_ids: list[str] = Field(default_factory=list)
+    result: dict[str, Any] = Field(default_factory=dict)
+
+
 PAYLOAD_MODELS: dict[str, type[BaseModel]] = {
     "ProcurementOrdered": ProcurementOrderedPayload,
     "GoodsReceived": GoodsReceivedPayload,
@@ -142,6 +150,7 @@ PAYLOAD_MODELS: dict[str, type[BaseModel]] = {
     "SelectiveDisclosureRevealed": SelectiveDisclosureRevealedPayload,
     "OrchestratorStateChanged": OrchestratorStateChangedPayload,
     "ToolInvocationLogged": ToolInvocationLoggedPayload,
+    "DemoScenarioInitialized": DemoScenarioInitializedPayload,
 }
 
 

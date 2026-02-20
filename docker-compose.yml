@@ -57,6 +57,7 @@ services:
       TC_MINIO_SECRET_KEY: minioadmin
       TC_MINIO_BUCKET: receipts
       TC_MINIO_SECURE: "false"
+      TC_BOOTSTRAP_DEMO_ON_STARTUP: "true"
     depends_on:
       postgres:
         condition: service_healthy
@@ -110,6 +111,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      app:
+        condition: service_started
     volumes:
       - ./app/dashboard/superset/superset_config.py:/app/pythonpath/superset_config.py
       - superset_home:/app/superset_home

@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     database_url: str = "sqlite+pysqlite:///./tc.db"
     test_database_url: str = "sqlite+pysqlite:///:memory:"
 
+    bootstrap_demo_on_startup: bool = False
+
     agent_signing_key: str = Field(
         default="Lw8iRr6HF9qf8Bk6Y2mJxZTAWGFvPn8qWqv4HP47jtk=",
         description="Base64 Ed25519 seed (32 bytes)",
