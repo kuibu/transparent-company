@@ -20,6 +20,14 @@ class Settings(BaseSettings):
 
     bootstrap_demo_on_startup: bool = False
 
+    # Agent memory backend: openviking_http | local
+    agent_memory_backend: str = "openviking_http"
+    openviking_base_url: str = "http://openviking:1933"
+    openviking_api_key: str | None = None
+    openviking_timeout_seconds: int = 15
+    openviking_auto_commit: bool = True
+    openviking_fallback_local: bool = True
+
     agent_signing_key: str = Field(
         default="Lw8iRr6HF9qf8Bk6Y2mJxZTAWGFvPn8qWqv4HP47jtk=",
         description="Base64 Ed25519 seed (32 bytes)",

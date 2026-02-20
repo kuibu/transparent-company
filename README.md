@@ -28,6 +28,7 @@
 - 承诺与证明：Merkle root + inclusion proof
 - 封条锚定：immudb（披露承诺和回执摘要）
 - BI 看板：Superset 直接连接 `disclosure_*` 表与视图
+- Agent 记忆：通过 OpenViking HTTP 会话（可回退本地）沉淀 CEO 决策记忆与使命上下文
 
 ### 架构分层
 - `app/ledger/*`: 事件 schema、canonical JSON、签名、Merkle、anchoring、receipt hash
@@ -88,6 +89,21 @@ docker compose up -d --build
 - 默认看板: `http://localhost:8088/superset/dashboard/transparent-company-default-story/`
 - MinIO Console: `http://localhost:9001`（`minioadmin/minioadmin`）
 - immudb gRPC: `localhost:3322`
+
+### Agent 记忆（OpenViking）
+OpenViking 开源项目：`https://github.com/volcengine/openviking`
+
+本项目新增了“有记忆的 agent 对话层”（HTTP API），用于让 CEO agent 记住：
+- 自己的使命（mission）与 system prompt
+- 历史对话中的关键决策
+- 与不同对象（人类/其他 agent/审计者）的连续上下文
+
+默认配置：
+- `TC_AGENT_MEMORY_BACKEND=openviking_http`
+- `TC_OPENVIKING_BASE_URL=http://openviking:1933`
+- `TC_OPENVIKING_FALLBACK_LOCAL=true`
+
+说明：若未接入 OpenViking server，系统会自动回退到本地记忆后端，不影响 API 使用。接入后会自动使用 OpenViking 的 `sessions/messages/commit/search`。
 
 ### Demo（端到端）
 服务启动后会自动自举默认故事数据（`TC_BOOTSTRAP_DEMO_ON_STARTUP=true`）：
@@ -166,6 +182,15 @@ curl http://localhost:8000/anchor/disclosure/<disclosure_id>
 - `POST /disclosure/{disclosure_id}/selective/reveal`
 - `GET  /anchor/disclosure/{disclosure_id}`
 - `GET  /reports/pnl?period=start/end`
+- `GET  /agent/memory/backend/health`
+- `POST /agent/memory/profiles`
+- `GET  /agent/memory/profiles/{agent_id}`
+- `POST /agent/memory/conversations`
+- `GET  /agent/memory/conversations/{conversation_id}`
+- `POST /agent/memory/conversations/{conversation_id}/messages`
+- `POST /agent/memory/conversations/{conversation_id}/chat`
+- `POST /agent/memory/conversations/{conversation_id}/commit`
+- `GET  /agent/memory/conversations/{conversation_id}/memory/search?q=...`
 
 ### 测试
 ```bash
@@ -212,6 +237,7 @@ It matches an “agent as primary driver + human as copilot” model:
 - Commitment and proof: Merkle root + inclusion proof
 - Anchoring: immudb for disclosure commitments and receipt digests
 - BI dashboards: Superset on top of `disclosure_*` tables/views
+- Agent memory: OpenViking HTTP sessions (with local fallback) preserve CEO mission and decision memory
 
 ### Architecture Layers
 - `app/ledger/*`: event schema, canonical JSON, signing, Merkle, anchoring, receipt hashing
@@ -272,6 +298,21 @@ Endpoints:
 - Default dashboard: `http://localhost:8088/superset/dashboard/transparent-company-default-story/`
 - MinIO Console: `http://localhost:9001` (`minioadmin/minioadmin`)
 - immudb gRPC: `localhost:3322`
+
+### Agent Memory (OpenViking)
+OpenViking open-source project: `https://github.com/volcengine/openviking`
+
+This repo now includes a memory-aware agent conversation layer (HTTP API) so a CEO agent can retain:
+- its mission and system prompt
+- key historical decisions
+- continuous context across human/agent/auditor conversations
+
+Default config:
+- `TC_AGENT_MEMORY_BACKEND=openviking_http`
+- `TC_OPENVIKING_BASE_URL=http://openviking:1933`
+- `TC_OPENVIKING_FALLBACK_LOCAL=true`
+
+If OpenViking server is unavailable, the system automatically falls back to a local memory backend. Once connected, it uses OpenViking `sessions/messages/commit/search` endpoints.
 
 ### End-to-End Demo
 On startup, the stack auto-bootstraps a default storyline (`TC_BOOTSTRAP_DEMO_ON_STARTUP=true`):
@@ -350,6 +391,15 @@ If you run `docker compose down -v`, business data volumes are cleared; on next 
 - `POST /disclosure/{disclosure_id}/selective/reveal`
 - `GET  /anchor/disclosure/{disclosure_id}`
 - `GET  /reports/pnl?period=start/end`
+- `GET  /agent/memory/backend/health`
+- `POST /agent/memory/profiles`
+- `GET  /agent/memory/profiles/{agent_id}`
+- `POST /agent/memory/conversations`
+- `GET  /agent/memory/conversations/{conversation_id}`
+- `POST /agent/memory/conversations/{conversation_id}/messages`
+- `POST /agent/memory/conversations/{conversation_id}/chat`
+- `POST /agent/memory/conversations/{conversation_id}/commit`
+- `GET  /agent/memory/conversations/{conversation_id}/memory/search?q=...`
 
 ### Tests
 ```bash

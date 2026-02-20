@@ -146,7 +146,54 @@ class SelectiveRevealAuditModel(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
+class AgentProfileModel(Base):
+    __tablename__ = "agent_profiles"
+
+    agent_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    display_name: Mapped[Optional[str]] = mapped_column(String(256), nullable=True)
+    mission: Mapped[str] = mapped_column(Text, nullable=False)
+    system_prompt: Mapped[str] = mapped_column(Text, nullable=False)
+    metadata_json: Mapped[dict] = mapped_column(_json_type(), nullable=False, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class AgentConversationModel(Base):
+    __tablename__ = "agent_conversations"
+
+    conversation_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    agent_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    counterpart_type: Mapped[str] = mapped_column(String(16), nullable=False)
+    counterpart_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    memory_backend: Mapped[str] = mapped_column(String(32), nullable=False)
+    memory_session_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class AgentMessageModel(Base):
+    __tablename__ = "agent_messages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    conversation_id: Mapped[str] = mapped_column(
+        String(64),
+        ForeignKey("agent_conversations.conversation_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    sender_type: Mapped[str] = mapped_column(String(16), nullable=False)
+    sender_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    role: Mapped[str] = mapped_column(String(16), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    is_decision: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    metadata_json: Mapped[dict] = mapped_column(_json_type(), nullable=False, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
 Index("ix_ledger_events_occurred_at", LedgerEventModel.occurred_at)
 Index("ix_ledger_events_event_type", LedgerEventModel.event_type)
 Index("ix_disclosure_metric_key", DisclosureMetricModel.metric_key)
 Index("ix_disclosure_grouped_metric_key", DisclosureGroupedMetricModel.metric_key)
+Index("ix_agent_conversations_agent_id", AgentConversationModel.agent_id)
+Index("ix_agent_messages_conversation_id", AgentMessageModel.conversation_id)
+Index("ix_agent_messages_created_at", AgentMessageModel.created_at)
+Index("ix_agent_messages_is_decision", AgentMessageModel.is_decision)

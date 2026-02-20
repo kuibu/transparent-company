@@ -58,6 +58,10 @@ services:
       TC_MINIO_BUCKET: receipts
       TC_MINIO_SECURE: "false"
       TC_BOOTSTRAP_DEMO_ON_STARTUP: "true"
+      TC_AGENT_MEMORY_BACKEND: openviking_http
+      TC_OPENVIKING_BASE_URL: http://openviking:1933
+      TC_OPENVIKING_AUTO_COMMIT: "true"
+      TC_OPENVIKING_FALLBACK_LOCAL: "true"
     depends_on:
       postgres:
         condition: service_healthy
