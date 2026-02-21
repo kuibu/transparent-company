@@ -6,3 +6,5 @@ __pycache__/
 *.sqlite
 *.db
 .env
+
+app/demo/exports/transparent_supermarket_*

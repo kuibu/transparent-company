@@ -39,6 +39,23 @@ services:
     volumes:
       - minio_data:/data
 
+  openviking:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      OPENVIKING_STORE_FILE: /data/openviking_store.json
+    command: uvicorn app.agent.openviking_service:app --host 0.0.0.0 --port 1933
+    ports:
+      - "1933:1933"
+    volumes:
+      - openviking_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:1933/health >/dev/null || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
   app:
     build:
       context: .
@@ -69,6 +86,8 @@ services:
         condition: service_started
       minio:
         condition: service_started
+      openviking:
+        condition: service_healthy
     ports:
       - "8000:8000"
     volumes:
@@ -126,4 +145,5 @@ volumes:
   pg_data:
   immudb_data:
   minio_data:
+  openviking_data:
   superset_home:

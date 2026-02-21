@@ -89,6 +89,7 @@ docker compose up -d --build
 - 默认看板: `http://localhost:8088/superset/dashboard/david-transparent-supermarket-story/`
 - MinIO Console: `http://localhost:9001`（`minioadmin/minioadmin`）
 - immudb gRPC: `localhost:3322`
+- OpenViking API: `http://localhost:1933`
 
 ### Agent 记忆（OpenViking）
 OpenViking 开源项目：`https://github.com/volcengine/openviking`
@@ -105,10 +106,10 @@ OpenViking 开源项目：`https://github.com/volcengine/openviking`
 - `TC_OPENVIKING_FALLBACK_LOCAL=true`
 
 说明：
-- 当前 `docker-compose.yml` 不内置 `openviking` 服务容器。
-- 若要接入真实 OpenViking，请先独立部署服务，并将 `TC_OPENVIKING_BASE_URL` 指向该地址。
-- 若 OpenViking 不可达，系统会自动回退到本地记忆后端，不影响 API 使用。
-- 接入后系统会使用 OpenViking 的 `sessions/messages/commit/search` 能力。
+- `docker-compose.yml` 已内置 `openviking` 服务，默认地址为 `http://openviking:1933`。
+- `app` 会在 `openviking` 健康后启动，默认直接使用 OpenViking 记忆后端。
+- 若 OpenViking 临时不可达，系统仍会自动回退到本地记忆后端，不影响 API 使用。
+- 当前实现对接 OpenViking HTTP 接口族：`/health`、`/api/v1/sessions`、`/messages`、`/commit`、`/search`。
 
 ### Demo（端到端）
 服务启动后会自动自举默认故事数据（`TC_BOOTSTRAP_DEMO_ON_STARTUP=true`）：
@@ -342,6 +343,7 @@ Endpoints:
 - Default dashboard: `http://localhost:8088/superset/dashboard/david-transparent-supermarket-story/`
 - MinIO Console: `http://localhost:9001` (`minioadmin/minioadmin`)
 - immudb gRPC: `localhost:3322`
+- OpenViking API: `http://localhost:1933`
 
 ### Agent Memory (OpenViking)
 OpenViking open-source project: `https://github.com/volcengine/openviking`
@@ -358,10 +360,10 @@ Default config:
 - `TC_OPENVIKING_FALLBACK_LOCAL=true`
 
 Notes:
-- Current `docker-compose.yml` does not embed an `openviking` service container.
-- To use a real OpenViking backend, deploy OpenViking separately and point `TC_OPENVIKING_BASE_URL` to it.
-- If OpenViking is unavailable, the system automatically falls back to a local memory backend.
-- Once connected, it uses OpenViking `sessions/messages/commit/search` endpoints.
+- `docker-compose.yml` now includes a built-in `openviking` service (default: `http://openviking:1933`).
+- The `app` service waits for OpenViking health and uses it as the default memory backend.
+- If OpenViking is temporarily unavailable, the system automatically falls back to local memory.
+- Current integration covers OpenViking HTTP endpoints: `/health`, `/api/v1/sessions`, `/messages`, `/commit`, `/search`.
 
 ### End-to-End Demo
 On startup, the stack auto-bootstraps the default storyline (`TC_BOOTSTRAP_DEMO_ON_STARTUP=true`):
