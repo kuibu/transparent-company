@@ -29,6 +29,7 @@
 - 封条锚定：immudb（披露承诺和回执摘要）
 - BI 看板：Superset 直接连接 `disclosure_*` 表与视图
 - Agent 记忆：通过 OpenViking HTTP 会话（可回退本地）沉淀 CEO 决策记忆与使命上下文
+- Agent + Skills：`SkillRegistry/SkillRouter/SkillExecutor` 插件化执行，且每次运行写入 `SkillRunStarted/SkillRunFinished/SkillRunFailed` 不可变审计事件
 
 ### 架构分层
 - `app/ledger/*`: 事件 schema、canonical JSON、签名、Merkle、anchoring、receipt hash
@@ -37,6 +38,8 @@
 - `app/disclosure/*`: policy、指标计算、承诺、声明、选择性披露
 - `app/persistence/*`: Postgres 模型与初始化
 - `app/api/*`: FastAPI 路由
+- `app/agent/*`: 主驾驶 Agent、记忆后端与工具连接器
+- `app/agent/skills/*`: skills 解析、路由、执行与 entrypoint 注册
 - `app/dashboard/superset/*`: Superset 初始化与自动注册脚本
 
 ### 关键口径
@@ -65,6 +68,7 @@ Merkle leaf（确定性）：
 ```text
 app/
   main.py
+  cli.py
   core/
   ledger/
   domain/
@@ -72,9 +76,13 @@ app/
   disclosure/
   persistence/
   api/
+  agent/
+    skills/
   dashboard/superset/
+skills/
 scripts/
 tests/
+SKILLS.md
 docker-compose.yml
 ```
 
@@ -123,6 +131,25 @@ OpenViking 开源项目：`https://github.com/volcengine/openviking`
 ```bash
 curl -H "X-API-Key: tc-human-dev-key" http://localhost:8000/ledger/full/events
 ```
+
+### Skills（外挂式新增）
+新增 `skills/` 体系，保持现有 API 与脚本兼容。
+
+- 加载：`SkillRegistry` 扫描 `skills/*/SKILL.md`
+- 路由：显式 `skill:<name>` 优先，其次关键词 `triggers` 匹配
+- 执行：`SkillExecutor` 仅调用白名单 `entrypoint`（不做自然语言工具自动调用）
+- 审计：每次执行写入 `SkillRunStarted`/`SkillRunFinished`/`SkillRunFailed` 不可变事件
+- 风险门控：`permissions` 含 `exec` 或 `network` 视为高风险；显式调用需在 `SKILLS_APPROVED_LIST` 放行
+- 自动路由门槛：`SKILLS_MAX_AUTOLOAD_RISK=low|high`
+- 内置示例：`skills/procurement`（采购+入库）与 `skills/disclosure`（披露发布）
+
+CLI 示例：
+```bash
+python -m app.cli agent run "skill:procurement 今天进100斤青菜 供货商A 单价3.2"
+python -m app.cli agent run "skill:disclosure 披露昨日汇总 粒度=日"
+```
+
+扩展规范见 `SKILLS.md`。
 
 ### Demo（端到端）
 服务启动后会自动自举默认故事数据（`TC_BOOTSTRAP_DEMO_ON_STARTUP=true`）：
@@ -271,8 +298,14 @@ curl http://localhost:8000/anchor/disclosure/<disclosure_id>
 - 授权 token 为一次性（single-use）：首次 reveal 成功后即失效，重放会返回 `409`.
 
 ### 测试
+推荐循环（容器内 Python 3.11 环境）：
 ```bash
-PYTHONPATH=/workspace pytest -q
+docker compose exec app sh -lc 'cd /workspace && PYTHONPATH=/workspace pytest -q'
+```
+
+可选 smoke（skills CLI）：
+```bash
+docker compose exec app sh -lc 'cd /workspace && python -m app.cli agent run "skill:procurement 今天进100斤青菜 供货商A 单价3.2"'
 ```
 
 覆盖：
@@ -282,6 +315,7 @@ PYTHONPATH=/workspace pytest -q
 - replay consistency
 - disclosure proof
 - e2e demo
+- skills manifest 解析、路由与执行审计事件
 
 ### 安全与合规边界
 - public 策略不输出客户/供应商可识别信息
@@ -318,6 +352,7 @@ It matches an “agent as primary driver + human as copilot” model:
 - Anchoring: immudb for disclosure commitments and receipt digests
 - BI dashboards: Superset on top of `disclosure_*` tables/views
 - Agent memory: OpenViking HTTP sessions (with local fallback) preserve CEO mission and decision memory
+- Agent + Skills runtime: plugin-style `SkillRegistry`/`SkillRouter`/`SkillExecutor` with immutable `SkillRunStarted`/`SkillRunFinished`/`SkillRunFailed` audit events
 
 ### Architecture Layers
 - `app/ledger/*`: event schema, canonical JSON, signing, Merkle, anchoring, receipt hashing
@@ -326,6 +361,8 @@ It matches an “agent as primary driver + human as copilot” model:
 - `app/disclosure/*`: policy, metrics computation, commitments, statements, selective disclosure
 - `app/persistence/*`: Postgres models and initialization
 - `app/api/*`: FastAPI routes
+- `app/agent/*`: primary-driver agent, memory backend, and connectors
+- `app/agent/skills/*`: skill parsing, routing, execution, and entrypoint registry
 - `app/dashboard/superset/*`: Superset init and auto-bootstrap scripts
 
 ### Key Conventions
@@ -354,6 +391,7 @@ Deterministic Merkle leaf:
 ```text
 app/
   main.py
+  cli.py
   core/
   ledger/
   domain/
@@ -361,9 +399,13 @@ app/
   disclosure/
   persistence/
   api/
+  agent/
+    skills/
   dashboard/superset/
+skills/
 scripts/
 tests/
+SKILLS.md
 docker-compose.yml
 ```
 
@@ -412,6 +454,25 @@ Example:
 ```bash
 curl -H "X-API-Key: tc-human-dev-key" http://localhost:8000/ledger/full/events
 ```
+
+### Skills (Add-on, Non-breaking)
+The project now supports an add-on `skills/` runtime without breaking existing APIs/scripts.
+
+- Loading: `SkillRegistry` scans `skills/*/SKILL.md`
+- Routing: explicit `skill:<name>` first, then trigger keyword matching
+- Execution: `SkillExecutor` calls only registered code entrypoints (no NL auto tool invocation)
+- Audit: every run writes immutable `SkillRunStarted`/`SkillRunFinished`/`SkillRunFailed` events
+- Risk gate: any `permissions` containing `exec` or `network` is treated as high-risk; explicit run must be allow-listed in `SKILLS_APPROVED_LIST`
+- Auto-route ceiling: `SKILLS_MAX_AUTOLOAD_RISK=low|high`
+- Built-in examples: `skills/procurement` (procurement + goods received) and `skills/disclosure` (disclosure publish)
+
+CLI examples:
+```bash
+python -m app.cli agent run "skill:procurement 今天进100斤青菜 供货商A 单价3.2"
+python -m app.cli agent run "skill:disclosure 披露昨日汇总 粒度=日"
+```
+
+See `SKILLS.md` for authoring rules.
 
 ### End-to-End Demo
 On startup, the stack auto-bootstraps the default storyline (`TC_BOOTSTRAP_DEMO_ON_STARTUP=true`):
@@ -560,8 +621,14 @@ Selective disclosure security (new):
 - The reveal token is single-use; replay attempts return `409`.
 
 ### Tests
+Recommended test loop (inside the Python 3.11 app container):
 ```bash
-PYTHONPATH=/workspace pytest -q
+docker compose exec app sh -lc 'cd /workspace && PYTHONPATH=/workspace pytest -q'
+```
+
+Optional smoke (skills CLI):
+```bash
+docker compose exec app sh -lc 'cd /workspace && python -m app.cli agent run "skill:procurement 今天进100斤青菜 供货商A 单价3.2"'
 ```
 
 Coverage:
@@ -571,6 +638,7 @@ Coverage:
 - replay consistency
 - disclosure proof
 - end-to-end demo
+- skills manifest parsing, routing, and execution audit events
 
 ### Security & Compliance Boundaries
 - Public policy does not expose personally/supplier-identifiable fields

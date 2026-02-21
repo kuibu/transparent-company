@@ -190,6 +190,38 @@ class CompanyCompensationIssuedPayload(BaseModel):
     receipt_hash: str
 
 
+class SkillRunStartedPayload(BaseModel):
+    run_id: str
+    skill_name: str
+    entrypoint: str
+    actor_id: str
+    inputs_hash: str = Field(min_length=64, max_length=64)
+    outputs_hash: str = ""
+    permissions: list[str] = Field(default_factory=list)
+    sop_hash: str = Field(min_length=64, max_length=64)
+    receipt_hash: str | None = None
+
+
+class SkillRunFinishedPayload(BaseModel):
+    run_id: str
+    skill_name: str
+    entrypoint: str
+    actor_id: str
+    inputs_hash: str = Field(min_length=64, max_length=64)
+    outputs_hash: str = Field(min_length=64, max_length=64)
+    receipt_hash: str | None = None
+
+
+class SkillRunFailedPayload(BaseModel):
+    run_id: str
+    skill_name: str
+    entrypoint: str
+    actor_id: str
+    inputs_hash: str = Field(min_length=64, max_length=64)
+    outputs_hash: str = ""
+    error: str
+
+
 PAYLOAD_MODELS: dict[str, type[BaseModel]] = {
     "ProcurementOrdered": ProcurementOrderedPayload,
     "GoodsReceived": GoodsReceivedPayload,
@@ -208,6 +240,9 @@ PAYLOAD_MODELS: dict[str, type[BaseModel]] = {
     "ComplaintLogged": ComplaintLoggedPayload,
     "CustomerConflictReported": CustomerConflictReportedPayload,
     "CompanyCompensationIssued": CompanyCompensationIssuedPayload,
+    "SkillRunStarted": SkillRunStartedPayload,
+    "SkillRunFinished": SkillRunFinishedPayload,
+    "SkillRunFailed": SkillRunFailedPayload,
 }
 
 

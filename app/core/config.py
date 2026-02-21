@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     demo_exports_root: Path = Path("/tmp/transparent-company/demo-exports")
 
     bootstrap_demo_on_startup: bool = False
+    skills_root: Path = Path("./skills")
+    skills_max_autoload_risk: str = Field(default="high", validation_alias="SKILLS_MAX_AUTOLOAD_RISK")
+    skills_approved_list: str = Field(default="", validation_alias="SKILLS_APPROVED_LIST")
 
     # Agent memory backend: openviking_http | local
     agent_memory_backend: str = "openviking_http"
