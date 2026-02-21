@@ -1,0 +1,55 @@
+tx_id,occurred_at,direction,counterparty,amount_cents,currency,subject,actor_type,actor_id,reference
+IN-ORD-20250115-01,2025-01-15T10:05:00Z,in,C001:Alice Lin,49600,CNY,order_payment,agent,agent-sales-001,ORD-20250115-01
+IN-ORD-20250118-01,2025-01-18T11:04:00Z,in,C002:Brian Wang,144000,CNY,order_payment,agent,agent-sales-001,ORD-20250118-01
+IN-ORD-20250125-01,2025-01-25T12:12:00Z,in,C003:Cathy Zhou,245000,CNY,order_payment,agent,agent-sales-001,ORD-20250125-01
+IN-ORD-20250208-01,2025-02-08T09:16:00Z,in,C004:Daniel Chen,75600,CNY,order_payment,agent,agent-sales-001,ORD-20250208-01
+IN-ORD-20250211-01,2025-02-11T08:42:00Z,in,C005:Evan Zhao,127750,CNY,order_payment,agent,agent-sales-001,ORD-20250211-01
+IN-ORD-20250220-01,2025-02-20T13:11:00Z,in,C006:Fiona Xu,196000,CNY,order_payment,agent,agent-sales-001,ORD-20250220-01
+IN-ORD-20250307-01,2025-03-07T10:23:00Z,in,C007:Gavin Sun,70400,CNY,order_payment,agent,agent-sales-001,ORD-20250307-01
+IN-ORD-20250314-01,2025-03-14T11:02:00Z,in,C008:Helen Han,111000,CNY,order_payment,agent,agent-sales-001,ORD-20250314-01
+IN-ORD-20250322-01,2025-03-22T14:03:00Z,in,C009:Iris Liu,297000,CNY,order_payment,agent,agent-sales-001,ORD-20250322-01
+IN-ORD-20250412-01,2025-04-12T09:31:00Z,in,C010:Jason Song,57400,CNY,order_payment,agent,agent-sales-001,ORD-20250412-01
+IN-ORD-20250418-01,2025-04-18T13:21:00Z,in,C003:Cathy Zhou,90200,CNY,order_payment,agent,agent-sales-001,ORD-20250418-01
+IN-ORD-20250509-01,2025-05-09T08:42:00Z,in,C005:Evan Zhao,209000,CNY,order_payment,agent,agent-sales-001,ORD-20250509-01
+IN-ORD-20250521-01,2025-05-21T15:02:00Z,in,C006:Fiona Xu,277200,CNY,order_payment,agent,agent-sales-001,ORD-20250521-01
+IN-ORD-20250526-01,2025-05-26T10:11:00Z,in,C010:Jason Song,53950,CNY,order_payment,agent,agent-sales-001,ORD-20250526-01
+IN-ORD-20250605-01,2025-06-05T11:31:00Z,in,C002:Brian Wang,234000,CNY,order_payment,agent,agent-sales-001,ORD-20250605-01
+IN-ORD-20250612-01,2025-06-12T09:02:00Z,in,C001:Alice Lin,99000,CNY,order_payment,agent,agent-sales-001,ORD-20250612-01
+IN-ORD-20250622-01,2025-06-22T14:12:00Z,in,C004:Daniel Chen,72250,CNY,order_payment,agent,agent-sales-001,ORD-20250622-01
+IN-ORD-20250624-01,2025-06-24T12:01:00Z,in,C008:Helen Han,348250,CNY,order_payment,agent,agent-sales-001,ORD-20250624-01
+IN-ORD-202506X-01,2025-06-01T09:02:00Z,in,C001:Alice Lin,13200,CNY,order_payment,agent,agent-sales-001,ORD-202506X-01
+IN-ORD-202506X-02,2025-06-02T10:02:00Z,in,C002:Brian Wang,9890,CNY,order_payment,agent,agent-sales-001,ORD-202506X-02
+IN-ORD-202506X-03,2025-06-03T11:02:00Z,in,C003:Cathy Zhou,17160,CNY,order_payment,agent,agent-sales-001,ORD-202506X-03
+IN-ORD-202506X-04,2025-06-04T12:02:00Z,in,C004:Daniel Chen,12470,CNY,order_payment,agent,agent-sales-001,ORD-202506X-04
+IN-ORD-202506X-05,2025-06-05T13:02:00Z,in,C005:Evan Zhao,15600,CNY,order_payment,agent,agent-sales-001,ORD-202506X-05
+IN-ORD-202506X-06,2025-06-06T14:02:00Z,in,C006:Fiona Xu,49500,CNY,order_payment,agent,agent-sales-001,ORD-202506X-06
+IN-ORD-202506X-07,2025-06-07T15:02:00Z,in,C007:Gavin Sun,25080,CNY,order_payment,agent,agent-sales-001,ORD-202506X-07
+IN-ORD-202506X-08,2025-06-08T16:02:00Z,in,C008:Helen Han,8600,CNY,order_payment,agent,agent-sales-001,ORD-202506X-08
+IN-ORD-202506X-09,2025-06-09T17:02:00Z,in,C009:Iris Liu,15180,CNY,order_payment,agent,agent-sales-001,ORD-202506X-09
+IN-ORD-202506X-10,2025-06-10T18:02:00Z,in,C010:Jason Song,10374,CNY,order_payment,agent,agent-sales-001,ORD-202506X-10
+IN-ORD-202506X-11,2025-06-11T09:02:00Z,in,C001:Alice Lin,14508,CNY,order_payment,agent,agent-sales-001,ORD-202506X-11
+IN-ORD-202506X-12,2025-06-12T10:02:00Z,in,C002:Brian Wang,46035,CNY,order_payment,agent,agent-sales-001,ORD-202506X-12
+IN-ORD-202506X-13,2025-06-13T11:02:00Z,in,C003:Cathy Zhou,21455,CNY,order_payment,agent,agent-sales-001,ORD-202506X-13
+IN-ORD-202506X-14,2025-06-14T12:02:00Z,in,C004:Daniel Chen,15162,CNY,order_payment,agent,agent-sales-001,ORD-202506X-14
+IN-ORD-202506X-15,2025-06-15T13:02:00Z,in,C005:Evan Zhao,12260,CNY,order_payment,agent,agent-sales-001,ORD-202506X-15
+IN-ORD-202506X-16,2025-06-16T14:02:00Z,in,C006:Fiona Xu,9177,CNY,order_payment,agent,agent-sales-001,ORD-202506X-16
+IN-ORD-202506X-17,2025-06-17T15:02:00Z,in,C007:Gavin Sun,14508,CNY,order_payment,agent,agent-sales-001,ORD-202506X-17
+IN-ORD-202506X-18,2025-06-18T16:02:00Z,in,C008:Helen Han,46035,CNY,order_payment,agent,agent-sales-001,ORD-202506X-18
+IN-ORD-202506X-19,2025-06-19T17:02:00Z,in,C009:Iris Liu,19616,CNY,order_payment,agent,agent-sales-001,ORD-202506X-19
+IN-ORD-202506X-20,2025-06-20T18:02:00Z,in,C010:Jason Song,13965,CNY,order_payment,agent,agent-sales-001,ORD-202506X-20
+IN-ORD-202506X-21,2025-06-21T09:02:00Z,in,C001:Alice Lin,24320,CNY,order_payment,agent,agent-sales-001,ORD-202506X-21
+IN-ORD-202506X-22,2025-06-22T10:02:00Z,in,C002:Brian Wang,8340,CNY,order_payment,agent,agent-sales-001,ORD-202506X-22
+IN-ORD-202506X-23,2025-06-23T11:02:00Z,in,C003:Cathy Zhou,15132,CNY,order_payment,agent,agent-sales-001,ORD-202506X-23
+IN-ORD-202506X-24,2025-06-24T12:02:00Z,in,C004:Daniel Chen,48015,CNY,order_payment,agent,agent-sales-001,ORD-202506X-24
+IN-ORD-202506X-25,2025-06-25T13:02:00Z,in,C005:Evan Zhao,18560,CNY,order_payment,agent,agent-sales-001,ORD-202506X-25
+IN-ORD-202506X-26,2025-06-26T14:02:00Z,in,C006:Fiona Xu,13344,CNY,order_payment,agent,agent-sales-001,ORD-202506X-26
+IN-ORD-202506X-27,2025-06-27T15:02:00Z,in,C007:Gavin Sun,22400,CNY,order_payment,agent,agent-sales-001,ORD-202506X-27
+IN-ORD-202506X-28,2025-06-28T16:02:00Z,in,C008:Helen Han,15846,CNY,order_payment,agent,agent-sales-001,ORD-202506X-28
+IN-ORD-202506X-29,2025-06-29T17:02:00Z,in,C009:Iris Liu,15132,CNY,order_payment,agent,agent-sales-001,ORD-202506X-29
+IN-ORD-202506X-30,2025-06-30T18:02:00Z,in,C010:Jason Song,48015,CNY,order_payment,agent,agent-sales-001,ORD-202506X-30
+OUT-REFUND-20250204-01,2025-02-04T20:10:00Z,out,C002:Brian Wang,10800,CNY,refund,agent,agent-refund-001,ORD-20250118-01
+OUT-COMP-20250522-01,2025-05-22T11:00:00Z,out,C006:Fiona Xu,68000,CNY,conflict_compensation,human,human-xu-dawei,CONFLICT-20250522-01
+OUT-REFUND-20250624-01,2025-06-24T18:10:00Z,out,C004:Daniel Chen,45000,CNY,abnormal_refund,agent,agent-refund-001,ORD-20250622-01
+OUT-BANK-20250320-01,2025-03-20T09:00:00Z,out,supplier-lanshan-tea,580000,CNY,supplier_settlement,human,human-xu-dawei,PO-20250305-TEA
+OUT-BANK-20250527-01,2025-05-27T12:10:00Z,out,supplier-donghai-fresh,620000,CNY,supplier_settlement,human,human-xu-dawei,PO-20250520-FISH
+OUT-BANK-20250628-01,2025-06-28T10:00:00Z,out,supplier-green-valley,540000,CNY,supplier_settlement,human,human-xu-dawei,PO-20250603-TOMATO

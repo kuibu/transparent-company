@@ -86,7 +86,7 @@ docker compose up -d --build
 服务地址：
 - API: `http://localhost:8000`
 - Superset: `http://localhost:8088`（`admin/admin`）
-- 默认看板: `http://localhost:8088/superset/dashboard/transparent-company-default-story/`
+- 默认看板: `http://localhost:8088/superset/dashboard/david-transparent-supermarket-story/`
 - MinIO Console: `http://localhost:9001`（`minioadmin/minioadmin`）
 - immudb gRPC: `localhost:3322`
 
@@ -107,20 +107,30 @@ OpenViking 开源项目：`https://github.com/volcengine/openviking`
 
 ### Demo（端到端）
 服务启动后会自动自举默认故事数据（`TC_BOOTSTRAP_DEMO_ON_STARTUP=true`）：
-- agent 主驾驶：采购建议、接单、收款、发货、退款、披露发布
-- human 副驾驶：高金额采购签署、高风险银行动作、关键披露复核
-- auditor 验证者：发布 selective-disclosure-ready 口径用于外部核验
+- 场景 ID：`david_transparent_supermarket_q1_q2_story_v3`
+- 覆盖两个季度（2025 Q1 + Q2）：采购、收货、销售、退款、过期报损、供应商切换、顾客冲突与赔偿
+- 角色分工：CEO Agent David 主驾驶；Human 法人徐大伟处理高风险/法定动作；Auditor 做数学验证
+- 子 Agent：Sales/QC/Refund/Complaint/Logistics 全部写入同一不可篡改账本
 
 **一句话（奶奶版）**
 把公司想成一个透明小菜店：
-- agent 像勤快店员，负责每天干活（进货、卖货、收钱、发货）
-- human 像店主，只在大事和高风险动作上签字拍板
-- 系统会给每一步盖电子章，并把关键指纹存进不可篡改保险柜（immudb）
-- 外面的人只看汇总账单（不泄露隐私），但能用数学证明这账单确实来自内部真账本
+- David 和一群小助手 agent 每天干活（进货、卖货、收钱、发货、退钱）
+- 店主（Human）只管高风险大事（签合同、银行指令、线下调解）
+- 每一步都有电子签名和“指纹封条”，任何人都能核验历史没被改过
 
 查看默认故事：
 ```bash
 curl http://localhost:8000/demo/default/story
+```
+
+查看默认数据资产（CSV/JSON 导出路径 + 灵魂文件清单）：
+```bash
+curl http://localhost:8000/demo/default/assets
+```
+
+获取 Superset 导入模板（JSON）：
+```bash
+curl http://localhost:8000/demo/default/superset-template
 ```
 
 如需手动重放（幂等）：
@@ -161,12 +171,14 @@ curl http://localhost:8000/anchor/disclosure/<disclosure_id>
   - `public.disclosure_runs`
   - `public.disclosure_metrics`
   - `public.disclosure_grouped_metrics`
-  - `public.disclosure_public_daily`
-  - `public.disclosure_investor_grouped`
-- 自动创建 dashboard：`Transparent Company - Default Story`
-  - Public Daily Revenue
-  - Public Daily Refund Rate (bps)
-  - Investor Revenue Mix (Channel + SKU)
+  - `public.disclosure_public_daily_kpi_pretty, public.disclosure_public_weekly_kpi_pretty, public.disclosure_public_monthly_kpi_pretty`
+  - `public.disclosure_investor_revenue_dimension_pretty, public.disclosure_investor_supplier_term_pretty`
+- 自动创建 dashboard：`David Transparent Supermarket - Trust Dashboard`
+  - Daily Revenue Trend (CNY)
+  - Daily Net Operating Cashflow (CNY)
+  - Daily Average Order Value (CNY)
+  - Weekly QC Fail Rate (%)
+  - Supplier Payment Term Structure (CNY)
 
 即使重建容器，数据库连接和 dataset 也会自动恢复。
 若执行 `docker compose down -v` 清空业务数据卷，应用在下次启动时会自动重新写入默认故事数据（也可手动调用 `/demo/seed`）。
@@ -174,6 +186,8 @@ curl http://localhost:8000/anchor/disclosure/<disclosure_id>
 ### API
 - `POST /demo/seed`
 - `GET  /demo/default/story`
+- `GET  /demo/default/assets`
+- `GET  /demo/default/superset-template`
 - `GET  /disclosure/policies`
 - `POST /disclosure/publish`
 - `GET  /disclosure/{disclosure_id}`
@@ -295,7 +309,7 @@ docker compose up -d --build
 Endpoints:
 - API: `http://localhost:8000`
 - Superset: `http://localhost:8088` (`admin/admin`)
-- Default dashboard: `http://localhost:8088/superset/dashboard/transparent-company-default-story/`
+- Default dashboard: `http://localhost:8088/superset/dashboard/david-transparent-supermarket-story/`
 - MinIO Console: `http://localhost:9001` (`minioadmin/minioadmin`)
 - immudb gRPC: `localhost:3322`
 
@@ -315,21 +329,31 @@ Default config:
 If OpenViking server is unavailable, the system automatically falls back to a local memory backend. Once connected, it uses OpenViking `sessions/messages/commit/search` endpoints.
 
 ### End-to-End Demo
-On startup, the stack auto-bootstraps a default storyline (`TC_BOOTSTRAP_DEMO_ON_STARTUP=true`):
-- Agent primary driver: procurement, order intake, payment capture, shipment, refunds, disclosure publishing
-- Human copilot: high-value procurement sign-off, high-risk bank action, governance checkpoint disclosure
-- Auditor verifier: selective-disclosure-ready publication for external verification
+On startup, the stack auto-bootstraps the default storyline (`TC_BOOTSTRAP_DEMO_ON_STARTUP=true`):
+- Scenario ID: `david_transparent_supermarket_q1_q2_story_v3`
+- Covers two quarters (2025 Q1 + Q2): procurement, receiving, sales, refunds, expiration loss, supplier switch, customer conflict, compensation
+- Role split: CEO Agent David as primary driver, Human legal representative for high-risk/legal actions, Auditor for math-based verification
+- Sub-agents (Sales/QC/Refund/Complaint/Logistics) all write to the same immutable ledger
 
 **Grandma-friendly explanation**
-Think of this project like a transparent neighborhood grocery shop:
-- The agent is the busy clerk doing daily work (buy, sell, collect money, ship)
-- The human is the owner who signs only big or risky actions
-- Every step gets a crypto stamp, and key fingerprints are sealed in an immutable vault (immudb)
-- The public sees safe summaries (no private details) but can still verify they come from the real internal ledger
+Think of this like a transparent grocery shop:
+- David and helper agents do daily operations (buy, sell, collect cash, ship, refund)
+- The human owner only handles risky/legal tasks (contracts, bank instructions, on-site mediation)
+- Every step is signed and sealed, so anyone can verify history was not modified
 
 Inspect the default storyline:
 ```bash
 curl http://localhost:8000/demo/default/story
+```
+
+Inspect exported demo assets (CSV/JSON paths + soul manifest):
+```bash
+curl http://localhost:8000/demo/default/assets
+```
+
+Get Superset dashboard import template (JSON):
+```bash
+curl http://localhost:8000/demo/default/superset-template
 ```
 
 Re-run seed manually (idempotent):
@@ -370,12 +394,14 @@ During container init, the system automatically:
   - `public.disclosure_runs`
   - `public.disclosure_metrics`
   - `public.disclosure_grouped_metrics`
-  - `public.disclosure_public_daily`
-  - `public.disclosure_investor_grouped`
-- auto-creates dashboard: `Transparent Company - Default Story`
-  - Public Daily Revenue
-  - Public Daily Refund Rate (bps)
-  - Investor Revenue Mix (Channel + SKU)
+  - `public.disclosure_public_daily_kpi_pretty, public.disclosure_public_weekly_kpi_pretty, public.disclosure_public_monthly_kpi_pretty`
+  - `public.disclosure_investor_revenue_dimension_pretty, public.disclosure_investor_supplier_term_pretty`
+- auto-creates dashboard: `David Transparent Supermarket - Trust Dashboard`
+  - Daily Revenue Trend (CNY)
+  - Daily Net Operating Cashflow (CNY)
+  - Daily Average Order Value (CNY)
+  - Weekly QC Fail Rate (%)
+  - Supplier Payment Term Structure (CNY)
 
 After rebuilding containers, DB connection and datasets are restored automatically.
 If you run `docker compose down -v`, business data volumes are cleared; on next startup the app auto-seeds the default storyline (you can still call `/demo/seed` manually).
@@ -383,6 +409,8 @@ If you run `docker compose down -v`, business data volumes are cleared; on next 
 ### API
 - `POST /demo/seed`
 - `GET  /demo/default/story`
+- `GET  /demo/default/assets`
+- `GET  /demo/default/superset-template`
 - `GET  /disclosure/policies`
 - `POST /disclosure/publish`
 - `GET  /disclosure/{disclosure_id}`

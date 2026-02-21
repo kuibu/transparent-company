@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.demo import get_default_scenario_story, seed_default_scenario
+from app.demo.default_scenario import _build_superset_template
 from app.persistence.pg import get_session
 
 router = APIRouter(tags=["demo"])
@@ -17,3 +18,18 @@ def demo_seed(session: Session = Depends(get_session)):
 @router.get("/demo/default/story")
 def demo_default_story(session: Session = Depends(get_session)):
     return get_default_scenario_story(session)
+
+
+@router.get("/demo/default/assets")
+def demo_default_assets(session: Session = Depends(get_session)):
+    story = get_default_scenario_story(session)
+    return {
+        "scenario_id": story.get("scenario_id"),
+        "data_exports": story.get("data_exports", {}),
+        "soul_manifest": story.get("soul_manifest", []),
+    }
+
+
+@router.get("/demo/default/superset-template")
+def demo_default_superset_template():
+    return _build_superset_template()

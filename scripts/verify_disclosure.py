@@ -3,13 +3,77 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
 
-import requests
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
-from app.disclosure.commitment import normalize_group_param
-from app.ledger.canonical import canonical_json
-from app.ledger.merkle import MerkleTree, hash_leaf_payload, verify_proof
-from app.ledger.signing import load_role_key, verify_object
+RUNTIME_IMPORT_ERROR: Exception | None = None
+try:
+    from app.disclosure.commitment import normalize_group_param
+    from app.ledger.canonical import canonical_json
+    from app.ledger.merkle import MerkleTree, hash_leaf_payload, verify_proof
+    from app.ledger.signing import load_role_key, verify_object
+except ModuleNotFoundError as exc:  # pragma: no cover - host fallback path
+    RUNTIME_IMPORT_ERROR = exc
+
+
+def _delegate_to_app_container() -> None:
+    cmd = [
+        "docker",
+        "compose",
+        "exec",
+        "-T",
+        "app",
+        "env",
+        "TC_VERIFY_IN_APP_CONTAINER=1",
+        "python",
+        "/workspace/scripts/verify_disclosure.py",
+        *sys.argv[1:],
+    ]
+    proc = subprocess.run(cmd, cwd=str(REPO_ROOT))
+    raise SystemExit(proc.returncode)
+
+
+def _ensure_runtime_deps() -> None:
+    if RUNTIME_IMPORT_ERROR is None:
+        return
+
+    if os.getenv("TC_VERIFY_IN_APP_CONTAINER") == "1":
+        raise RuntimeError(f"missing Python dependency in app container: {RUNTIME_IMPORT_ERROR}")
+
+    # Host fallback: if local Python lacks project deps, run verification inside app container.
+    try:
+        subprocess.run(["docker", "compose", "version"], cwd=str(REPO_ROOT), check=True, capture_output=True)
+    except Exception as exc:  # pragma: no cover
+        raise RuntimeError(
+            f"missing local Python dependency ({RUNTIME_IMPORT_ERROR}) and docker compose unavailable ({exc})"
+        ) from exc
+
+    _delegate_to_app_container()
+
+
+def _http_get_json(url: str, params: dict | None = None, timeout: int = 30) -> dict:
+    full_url = url
+    if params:
+        query = urlencode(params)
+        connector = "&" if "?" in url else "?"
+        full_url = f"{url}{connector}{query}"
+
+    req = Request(full_url, method="GET")
+    with urlopen(req, timeout=timeout) as resp:
+        status = getattr(resp, "status", 200)
+        body = resp.read().decode("utf-8")
+
+    if int(status) >= 400:
+        raise RuntimeError(f"HTTP {status} for {full_url}: {body}")
+    return json.loads(body)
 
 
 def _sort_key(payload: dict) -> tuple:
@@ -77,6 +141,8 @@ def _resolve_public_key(disclosure_data: dict, statement: dict, cli_public_key: 
 
 
 def main() -> None:
+    _ensure_runtime_deps()
+
     parser = argparse.ArgumentParser(description="Verify disclosure signature, Merkle root, and proof")
     parser.add_argument("--base-url", default="http://localhost:8000")
     parser.add_argument("--disclosure-id", required=True)
@@ -85,9 +151,7 @@ def main() -> None:
     parser.add_argument("--public-key", default="", help="Ed25519 public key (base64)")
     args = parser.parse_args()
 
-    disclosure = requests.get(f"{args.base_url}/disclosure/{args.disclosure_id}", timeout=30)
-    disclosure.raise_for_status()
-    disclosure_data = disclosure.json()
+    disclosure_data = _http_get_json(f"{args.base_url}/disclosure/{args.disclosure_id}")
 
     statement = disclosure_data["statement"]
     signature = disclosure_data["statement_signature"]
@@ -98,13 +162,11 @@ def main() -> None:
     stated_root = statement["commitments"]["root_summary"]
 
     group = normalize_group_param(args.group)
-    proof_resp = requests.get(
+    proof_resp = _http_get_json(
         f"{args.base_url}/disclosure/{args.disclosure_id}/proof",
         params={"metric_key": args.metric_key, "group": json.dumps(group, ensure_ascii=False)},
-        timeout=30,
     )
-    proof_resp.raise_for_status()
-    proof_data = proof_resp.json()["proof"]
+    proof_data = proof_resp["proof"]
 
     leaf_hash = proof_data["leaf_hash"]
     proof_ok = verify_proof(leaf_hash, proof_data["proof"], proof_data["root_summary"])

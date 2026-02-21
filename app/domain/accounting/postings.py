@@ -84,6 +84,18 @@ def events_to_postings(
                 )
             )
 
+        if event.event_type == "CompanyCompensationIssued":
+            rows.append(
+                PostingRecord(
+                    date=event.occurred_at,
+                    narration=f"CompanyCompensationIssued {p.get('conflict_id')}",
+                    debit_account="Expenses:Compensation",
+                    credit_account="Assets:Cash",
+                    amount_cents=int(p.get("amount", 0)),
+                    meta={"event_id": event.event_id, "event_type": event.event_type},
+                )
+            )
+
     return rows
 
 
@@ -103,6 +115,7 @@ def postings_to_beancount_text(postings: list[PostingRecord]) -> str:
         "Income:Sales",
         "Expenses:COGS",
         "Expenses:Refunds",
+        "Expenses:Compensation",
     ]
     for account in opens:
         lines.append(f"{first_day.isoformat()} open {account} CNY")

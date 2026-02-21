@@ -33,12 +33,14 @@ def generate_pnl(
     income_sales = -_sum_account(entries, "Income:Sales")
     cogs = _sum_account(entries, "Expenses:COGS")
     refunds = _sum_account(entries, "Expenses:Refunds")
-    net_profit = income_sales - cogs - refunds
+    compensation = _sum_account(entries, "Expenses:Compensation")
+    net_profit = income_sales - cogs - refunds - compensation
 
     return {
         "income_sales": int(income_sales * 100),
         "cogs": int(cogs * 100),
         "refunds": int(refunds * 100),
+        "compensation": int(compensation * 100),
         "net_profit": int(net_profit * 100),
         "posting_count": len(postings),
         "beancount_ledger": ledger_text,

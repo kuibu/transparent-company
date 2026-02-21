@@ -1,0 +1,112 @@
+{
+  "template_version": "2.0",
+  "dashboard": {
+    "title": "David Transparent Supermarket - Trust Dashboard",
+    "slug": "david-transparent-supermarket-story",
+    "description": "Daily + weekly + monthly disclosure layers with operational, quality, and cashflow KPIs."
+  },
+  "database": {
+    "name": "TransparentCompanyPG",
+    "sqlalchemy_uri_env": "SUPERSET_ANALYTICS_DB_URI"
+  },
+  "datasets": [
+    {
+      "schema": "public",
+      "table": "disclosure_public_daily_kpi_pretty"
+    },
+    {
+      "schema": "public",
+      "table": "disclosure_public_weekly_kpi_pretty"
+    },
+    {
+      "schema": "public",
+      "table": "disclosure_public_monthly_kpi_pretty"
+    },
+    {
+      "schema": "public",
+      "table": "disclosure_investor_revenue_dimension_pretty"
+    },
+    {
+      "schema": "public",
+      "table": "disclosure_investor_supplier_term_pretty"
+    }
+  ],
+  "charts": [
+    {
+      "name": "Daily Revenue Trend (CNY)",
+      "dataset": "public.disclosure_public_daily_kpi_pretty",
+      "viz_type": "line",
+      "metric": "revenue_yuan",
+      "unit": "yuan"
+    },
+    {
+      "name": "Daily Net Operating Cashflow (CNY)",
+      "dataset": "public.disclosure_public_daily_kpi_pretty",
+      "viz_type": "line",
+      "metric": "operating_cash_net_inflow_yuan",
+      "unit": "yuan"
+    },
+    {
+      "name": "Daily Average Order Value (CNY)",
+      "dataset": "public.disclosure_public_daily_kpi_pretty",
+      "viz_type": "line",
+      "metric": "avg_order_value_yuan",
+      "unit": "yuan"
+    },
+    {
+      "name": "Weekly Repeat Purchase Rate (%)",
+      "dataset": "public.disclosure_public_weekly_kpi_pretty",
+      "viz_type": "line",
+      "metric": "repeat_purchase_rate_pct",
+      "unit": "percent"
+    },
+    {
+      "name": "Weekly QC Fail Rate (%)",
+      "dataset": "public.disclosure_public_weekly_kpi_pretty",
+      "viz_type": "dist_bar",
+      "metric": "qc_fail_rate_pct",
+      "unit": "percent"
+    },
+    {
+      "name": "Weekly Complaint Resolution Hours",
+      "dataset": "public.disclosure_public_weekly_kpi_pretty",
+      "viz_type": "line",
+      "metric": "complaint_resolution_hours_avg",
+      "unit": "hours"
+    },
+    {
+      "name": "Monthly Inventory Turnover Days",
+      "dataset": "public.disclosure_public_monthly_kpi_pretty",
+      "viz_type": "dist_bar",
+      "metric": "inventory_turnover_days",
+      "unit": "days"
+    },
+    {
+      "name": "Monthly Slow-moving SKU Ratio (%)",
+      "dataset": "public.disclosure_public_monthly_kpi_pretty",
+      "viz_type": "line",
+      "metric": "slow_moving_sku_ratio_pct",
+      "unit": "percent"
+    },
+    {
+      "name": "Promotion Phase Revenue Mix (CNY)",
+      "dataset": "public.disclosure_investor_revenue_dimension_pretty",
+      "viz_type": "rose",
+      "metric": "revenue_yuan",
+      "groupby": [
+        "promotion_phase"
+      ],
+      "unit": "yuan"
+    },
+    {
+      "name": "Supplier Payment Term Structure (CNY)",
+      "dataset": "public.disclosure_investor_supplier_term_pretty",
+      "viz_type": "rose",
+      "metric": "settlement_yuan",
+      "groupby": [
+        "payment_term_bucket"
+      ],
+      "unit": "yuan"
+    }
+  ]
+}

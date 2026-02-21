@@ -6,17 +6,23 @@ def test_default_scenario_seed_and_story(client):
     assert first.status_code == 200
     payload = first.json()
 
-    assert payload["scenario_id"] == "default_transparent_company_story_v1"
+    assert payload["scenario_id"] == "david_transparent_supermarket_q1_q2_story_v4"
     assert payload["seeded_now"] in {True, False}
     assert payload["identity_proof"]["all_valid"] is True
     assert payload["identity_proof"]["checked_event_count"] >= 3
-    assert payload["public_disclosure"]["signer_role"] == "agent"
+    assert payload["public_disclosure"]["signer_role"] in {"agent", "human"}
     assert payload["investor_disclosure"]["signer_role"] == "agent"
 
     human_signoffs = [
-        item for item in payload["human_actions"] if item["event_type"] in {"ProcurementOrdered", "DisclosurePublished"}
+        item
+        for item in payload["human_actions"]
+        if item["event_type"] in {"ProcurementOrdered", "DisclosurePublished", "SupplierContractSigned"}
     ]
     assert human_signoffs
+
+    assert payload["soul_manifest"]
+    assert payload["company"]["soul_manifest_hash"]
+    assert payload["data_exports"]["events_json"].endswith("david_transparent_supermarket_q1_q2_events.json")
 
     second = client.post("/demo/seed")
     assert second.status_code == 200

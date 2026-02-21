@@ -40,6 +40,7 @@ class InventoryAdjustItemModel(BaseModel):
     sku: str
     qty_delta: int
     batch_id: str | None = None
+    unit_cost: int | None = Field(default=None, ge=0, description="int cents")
 
 
 class ProcurementOrderedPayload(BaseModel):
@@ -62,6 +63,10 @@ class OrderPlacedPayload(BaseModel):
     items: list[OrderItemModel]
     channel: str
     region: str | None = None
+    store_id: str | None = None
+    time_slot: str | None = None
+    promotion_id: str | None = None
+    promotion_phase: str | None = None
 
 
 class PaymentCapturedPayload(BaseModel):
@@ -128,6 +133,10 @@ class ToolInvocationLoggedPayload(BaseModel):
     response_hash: str | None = None
     error: str | None = None
     governance: dict[str, Any] = Field(default_factory=dict)
+    amount_cents: int | None = Field(default=None, ge=0)
+    supplier_id: str | None = None
+    settlement_procurement_id: str | None = None
+    purpose: str | None = None
 
 
 class DemoScenarioInitializedPayload(BaseModel):
@@ -136,6 +145,49 @@ class DemoScenarioInitializedPayload(BaseModel):
     seeded_at: str
     key_event_ids: list[str] = Field(default_factory=list)
     result: dict[str, Any] = Field(default_factory=dict)
+
+
+class SupplierContractSignedPayload(BaseModel):
+    contract_id: str
+    supplier_id: str
+    signed_by: str
+    effective_date: str
+    terms_hash: str
+
+
+class PolicyUpdatedPayload(BaseModel):
+    policy_domain: str
+    previous_version: str
+    new_version: str
+    policy_hash: str
+    reason: str
+
+
+class ComplaintLoggedPayload(BaseModel):
+    complaint_id: str
+    order_id: str | None = None
+    customer_ref: str
+    topic: str
+    severity: Literal["low", "medium", "high", "critical"]
+    summary: str
+
+
+class CustomerConflictReportedPayload(BaseModel):
+    conflict_id: str
+    order_id: str | None = None
+    customer_ref: str
+    employee_ref: str
+    severity: Literal["low", "medium", "high", "critical"]
+    resolution: str
+    privacy_tags: list[str] = Field(default_factory=list)
+
+
+class CompanyCompensationIssuedPayload(BaseModel):
+    conflict_id: str
+    order_id: str | None = None
+    amount: int = Field(ge=0, description="int cents")
+    reason: str
+    receipt_hash: str
 
 
 PAYLOAD_MODELS: dict[str, type[BaseModel]] = {
@@ -151,6 +203,11 @@ PAYLOAD_MODELS: dict[str, type[BaseModel]] = {
     "OrchestratorStateChanged": OrchestratorStateChangedPayload,
     "ToolInvocationLogged": ToolInvocationLoggedPayload,
     "DemoScenarioInitialized": DemoScenarioInitializedPayload,
+    "SupplierContractSigned": SupplierContractSignedPayload,
+    "PolicyUpdated": PolicyUpdatedPayload,
+    "ComplaintLogged": ComplaintLoggedPayload,
+    "CustomerConflictReported": CustomerConflictReportedPayload,
+    "CompanyCompensationIssued": CompanyCompensationIssuedPayload,
 }
 
 

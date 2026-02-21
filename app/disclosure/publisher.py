@@ -41,6 +41,18 @@ def _as_utc(value: datetime) -> datetime:
     return value.astimezone(timezone.utc)
 
 
+def _event_in_scope(event: LedgerEventModel, scenario_id: str | None) -> bool:
+    if not scenario_id:
+        return True
+    tool_trace = event.tool_trace or {}
+    payload = event.payload or {}
+    if tool_trace.get("scenario_id") == scenario_id:
+        return True
+    if event.event_type == "DemoScenarioInitialized" and payload.get("scenario_id") == scenario_id:
+        return True
+    return False
+
+
 def _apply_redaction(grouped_metrics: list[dict], policy_id: str) -> list[dict]:
     policy = get_policy(policy_id)
     redacted: list[dict] = []
@@ -61,16 +73,18 @@ def publish_disclosure_run(
     period_end: datetime,
     group_by: list[str] | None,
     actor: Actor,
+    scenario_id: str | None = None,
 ) -> PublishResult:
     policy = get_policy(policy_id)
     period_start_utc = _as_utc(period_start)
     period_end_utc = _as_utc(period_end)
     signer = load_role_key(expected_signer_role(actor.type))
 
-    all_events = list(session.scalars(select(LedgerEventModel).order_by(LedgerEventModel.seq_id.asc())).all())
+    all_events_raw = list(session.scalars(select(LedgerEventModel).order_by(LedgerEventModel.seq_id.asc())).all())
+    all_events = [event for event in all_events_raw if _event_in_scope(event, scenario_id)]
     period_events = [event for event in all_events if period_start_utc <= _as_utc(event.occurred_at) < period_end_utc]
 
-    shipment_costs = rebuild_all_read_models(session)
+    shipment_costs = rebuild_all_read_models(session, events=all_events)
     period_shipment_costs = {
         event.event_id: shipment_costs.get(event.event_id, 0)
         for event in period_events

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import time
+from pathlib import Path
 
 from sqlalchemy import create_engine, text
 
@@ -18,11 +19,18 @@ DATASETS = [
     ("public", "disclosure_runs"),
     ("public", "disclosure_metrics"),
     ("public", "disclosure_grouped_metrics"),
-    ("public", "disclosure_public_daily"),
-    ("public", "disclosure_investor_grouped"),
+    ("public", "disclosure_public_daily_kpi_pretty"),
+    ("public", "disclosure_public_weekly_kpi_pretty"),
+    ("public", "disclosure_public_monthly_kpi_pretty"),
+    ("public", "disclosure_investor_revenue_dimension_pretty"),
+    ("public", "disclosure_investor_supplier_term_pretty"),
 ]
-DEFAULT_DASHBOARD_TITLE = "Transparent Company - Default Story"
-DEFAULT_DASHBOARD_SLUG = "transparent-company-default-story"
+DEFAULT_DASHBOARD_TITLE = "David Transparent Supermarket - Trust Dashboard"
+DEFAULT_DASHBOARD_SLUG = "david-transparent-supermarket-story"
+LEGACY_DASHBOARD_SLUG = "transparent-company-default-story"
+TEMPLATE_OUT = Path(
+    os.getenv("SUPERSET_TEMPLATE_OUT", "/app/superset_home/david_transparent_supermarket_superset_template.json")
+)
 
 
 def wait_for_analytics_db(sqlalchemy_uri: str, retries: int = 30, interval_seconds: int = 2) -> None:
@@ -114,29 +122,65 @@ def ensure_dataset(db_session, sqla_table_model, database, schema: str, table_na
     return dataset
 
 
-def _simple_filter(subject: str, comparator: str) -> dict:
+def _adhoc_sum(column_name: str, label: str) -> dict:
     return {
-        "clause": "WHERE",
         "expressionType": "SIMPLE",
-        "subject": subject,
-        "operator": "==",
-        "comparator": comparator,
+        "aggregate": "SUM",
+        "column": {"column_name": column_name, "type": "DOUBLE PRECISION"},
+        "sqlExpression": None,
+        "label": label,
+        "hasCustomLabel": True,
+        "optionName": f"metric_{column_name}",
     }
 
 
-def _table_form_data(dataset_id: int, columns: list[str], metric_key: str) -> dict:
+def _line_form_data(dataset_id: int, metric_column: str, metric_label: str, y_axis_format: str) -> dict:
     return {
         "datasource": f"{dataset_id}__table",
-        "viz_type": "table",
-        "all_columns": columns,
-        "adhoc_filters": [_simple_filter("metric_key", metric_key)],
+        "viz_type": "line",
+        "granularity_sqla": "period_start_date",
+        "time_grain_sqla": "P1D",
+        "metrics": [_adhoc_sum(metric_column, metric_label)],
+        "groupby": [],
         "row_limit": 5000,
-        "server_pagination": False,
-        "order_desc": True,
+        "order_desc": False,
+        "show_legend": False,
+        "x_axis_showminmax": False,
+        "y_axis_format": y_axis_format,
     }
 
 
-def ensure_chart(db_session, slice_model, dataset, slice_name: str, form_data: dict, description: str):
+def _bar_form_data(dataset_id: int, metric_column: str, metric_label: str, y_axis_format: str) -> dict:
+    return {
+        "datasource": f"{dataset_id}__table",
+        "viz_type": "dist_bar",
+        "groupby": ["period_start_date"],
+        "columns": [],
+        "metrics": [_adhoc_sum(metric_column, metric_label)],
+        "row_limit": 5000,
+        "order_desc": False,
+        "y_axis_format": y_axis_format,
+        "show_legend": False,
+        "rotate_x_labels": True,
+    }
+
+
+def _rose_form_data(dataset_id: int, metric_column: str, group_by: str, metric_label: str) -> dict:
+    return {
+        "datasource": f"{dataset_id}__table",
+        "viz_type": "rose",
+        "granularity_sqla": "period_start_date",
+        "time_grain_sqla": "P1M",
+        "groupby": [group_by],
+        "metrics": [_adhoc_sum(metric_column, metric_label)],
+        "row_limit": 5000,
+        "order_desc": False,
+        "show_legend": True,
+        "y_axis_format": ",.2f",
+    }
+
+
+def ensure_chart(db_session, slice_model, dataset, slice_name: str, viz_type: str, form_data: dict, description: str):
     chart = (
         db_session.query(slice_model)
         .filter(slice_model.slice_name == slice_name)
@@ -150,11 +194,11 @@ def ensure_chart(db_session, slice_model, dataset, slice_name: str, form_data: d
             datasource_id=dataset.id,
             datasource_type="table",
             datasource_name=f"{dataset.schema}.{dataset.table_name}",
-            viz_type="table",
+            viz_type=viz_type,
             description=description,
         )
 
-    chart.viz_type = "table"
+    chart.viz_type = viz_type
     chart.params = json.dumps(form_data, separators=(",", ":"), ensure_ascii=True)
     chart.query_context = None
     chart.datasource_name = f"{dataset.schema}.{dataset.table_name}"
@@ -172,38 +216,52 @@ def _build_dashboard_layout(charts) -> str:
         "GRID_ID": {
             "id": "GRID_ID",
             "type": "GRID",
-            "children": ["ROW-1"],
+            "children": [],
             "parents": ["ROOT_ID"],
             "meta": {},
         },
-        "ROW-1": {
-            "id": "ROW-1",
+    }
+
+    if not charts:
+        return json.dumps(layout, separators=(",", ":"), ensure_ascii=True)
+
+    row_chunks = [charts[idx : idx + 3] for idx in range(0, len(charts), 3)]
+    for row_idx, row_charts in enumerate(row_chunks, start=1):
+        row_id = f"ROW-{row_idx}"
+        layout["GRID_ID"]["children"].append(row_id)
+        layout[row_id] = {
+            "id": row_id,
             "type": "ROW",
             "children": [],
             "parents": ["ROOT_ID", "GRID_ID"],
             "meta": {"background": "BACKGROUND_TRANSPARENT"},
-        },
-    }
-
-    count = max(1, len(charts))
-    width = max(3, 12 // count)
-
-    for idx, chart in enumerate(charts, start=1):
-        chart_id = f"CHART-{idx}"
-        layout["ROW-1"]["children"].append(chart_id)
-        layout[chart_id] = {
-            "id": chart_id,
-            "type": "CHART",
-            "children": [],
-            "parents": ["ROOT_ID", "GRID_ID", "ROW-1"],
-            "meta": {"chartId": chart.id, "height": 50, "width": width},
         }
+
+        width = max(3, 12 // max(1, len(row_charts)))
+        for chart_idx, chart in enumerate(row_charts, start=1):
+            chart_id = f"CHART-{row_idx}-{chart_idx}"
+            layout[row_id]["children"].append(chart_id)
+            layout[chart_id] = {
+                "id": chart_id,
+                "type": "CHART",
+                "children": [],
+                "parents": ["ROOT_ID", "GRID_ID", row_id],
+                "meta": {"chartId": chart.id, "height": 48, "width": width},
+            }
 
     return json.dumps(layout, separators=(",", ":"), ensure_ascii=True)
 
 
 def ensure_dashboard(db_session, dashboard_model, charts) -> None:
     dashboard = db_session.query(dashboard_model).filter_by(slug=DEFAULT_DASHBOARD_SLUG).one_or_none()
+    legacy_dashboard = db_session.query(dashboard_model).filter_by(slug=LEGACY_DASHBOARD_SLUG).one_or_none()
+
+    if dashboard is None and legacy_dashboard is not None:
+        dashboard = legacy_dashboard
+    elif dashboard is not None and legacy_dashboard is not None and legacy_dashboard.id != dashboard.id:
+        db_session.delete(legacy_dashboard)
+        db_session.commit()
+
     if dashboard is None:
         dashboard = dashboard_model(
             dashboard_title=DEFAULT_DASHBOARD_TITLE,
@@ -222,43 +280,142 @@ def ensure_dashboard(db_session, dashboard_model, charts) -> None:
     db_session.commit()
 
 
-def ensure_default_assets(db_session, datasets: dict[tuple[str, str], object], slice_model, dashboard_model) -> None:
-    public_daily = datasets[("public", "disclosure_public_daily")]
-    investor_grouped = datasets[("public", "disclosure_investor_grouped")]
+def _template_payload() -> dict:
+    return {
+        "template_version": "2.0",
+        "dashboard": {"title": DEFAULT_DASHBOARD_TITLE, "slug": DEFAULT_DASHBOARD_SLUG},
+        "database": {"name": ANALYTICS_DB_NAME, "sqlalchemy_uri_env": "SUPERSET_ANALYTICS_DB_URI"},
+        "datasets": [
+            {"schema": "public", "table": "disclosure_public_daily_kpi_pretty"},
+            {"schema": "public", "table": "disclosure_public_weekly_kpi_pretty"},
+            {"schema": "public", "table": "disclosure_public_monthly_kpi_pretty"},
+            {"schema": "public", "table": "disclosure_investor_revenue_dimension_pretty"},
+            {"schema": "public", "table": "disclosure_investor_supplier_term_pretty"},
+        ],
+        "charts": [
+            {"name": "Daily Revenue Trend (CNY)", "dataset": "public.disclosure_public_daily_kpi_pretty", "viz_type": "line", "metric": "revenue_yuan"},
+            {"name": "Daily Net Operating Cashflow (CNY)", "dataset": "public.disclosure_public_daily_kpi_pretty", "viz_type": "line", "metric": "operating_cash_net_inflow_yuan"},
+            {"name": "Daily Average Order Value (CNY)", "dataset": "public.disclosure_public_daily_kpi_pretty", "viz_type": "line", "metric": "avg_order_value_yuan"},
+            {"name": "Weekly Repeat Purchase Rate (%)", "dataset": "public.disclosure_public_weekly_kpi_pretty", "viz_type": "line", "metric": "repeat_purchase_rate_pct"},
+            {"name": "Weekly QC Fail Rate (%)", "dataset": "public.disclosure_public_weekly_kpi_pretty", "viz_type": "dist_bar", "metric": "qc_fail_rate_pct"},
+            {"name": "Weekly Complaint Resolution Hours", "dataset": "public.disclosure_public_weekly_kpi_pretty", "viz_type": "line", "metric": "complaint_resolution_hours_avg"},
+            {"name": "Monthly Inventory Turnover Days", "dataset": "public.disclosure_public_monthly_kpi_pretty", "viz_type": "dist_bar", "metric": "inventory_turnover_days"},
+            {"name": "Monthly Slow-moving SKU Ratio (%)", "dataset": "public.disclosure_public_monthly_kpi_pretty", "viz_type": "line", "metric": "slow_moving_sku_ratio_pct"},
+            {"name": "Promotion Phase Revenue Mix (CNY)", "dataset": "public.disclosure_investor_revenue_dimension_pretty", "viz_type": "rose", "metric": "revenue_yuan", "groupby": ["promotion_phase"]},
+            {"name": "Supplier Payment Term Structure (CNY)", "dataset": "public.disclosure_investor_supplier_term_pretty", "viz_type": "rose", "metric": "settlement_yuan", "groupby": ["payment_term_bucket"]},
+        ],
+    }
 
-    chart_daily_revenue = ensure_chart(
-        db_session,
-        slice_model=slice_model,
-        dataset=public_daily,
-        slice_name="Public Daily Revenue",
-        form_data=_table_form_data(public_daily.id, ["period_day", "value"], metric_key="revenue_cents"),
-        description="Public disclosure: daily revenue in cents",
-    )
-    chart_refund_rate = ensure_chart(
-        db_session,
-        slice_model=slice_model,
-        dataset=public_daily,
-        slice_name="Public Daily Refund Rate (bps)",
-        form_data=_table_form_data(public_daily.id, ["period_day", "value"], metric_key="refund_rate_bps"),
-        description="Public disclosure: daily refund rate in basis points",
-    )
-    chart_investor_mix = ensure_chart(
-        db_session,
-        slice_model=slice_model,
-        dataset=investor_grouped,
-        slice_name="Investor Revenue Mix (Channel + SKU)",
-        form_data=_table_form_data(
-            investor_grouped.id,
-            ["period_day", "channel", "sku", "value"],
-            metric_key="revenue_cents",
+
+def write_template_file() -> None:
+    TEMPLATE_OUT.parent.mkdir(parents=True, exist_ok=True)
+    TEMPLATE_OUT.write_text(json.dumps(_template_payload(), ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def ensure_default_assets(db_session, datasets: dict[tuple[str, str], object], slice_model, dashboard_model) -> None:
+    daily = datasets[("public", "disclosure_public_daily_kpi_pretty")]
+    weekly = datasets[("public", "disclosure_public_weekly_kpi_pretty")]
+    monthly = datasets[("public", "disclosure_public_monthly_kpi_pretty")]
+    investor_dim = datasets[("public", "disclosure_investor_revenue_dimension_pretty")]
+    supplier_term = datasets[("public", "disclosure_investor_supplier_term_pretty")]
+
+    charts = [
+        ensure_chart(
+            db_session,
+            slice_model=slice_model,
+            dataset=daily,
+            slice_name="Daily Revenue Trend (CNY)",
+            viz_type="line",
+            form_data=_line_form_data(daily.id, "revenue_yuan", "Revenue (CNY)", ",.2f"),
+            description="Public daily disclosure: revenue",
         ),
-        description="Investor disclosure: grouped revenue by channel and SKU",
-    )
+        ensure_chart(
+            db_session,
+            slice_model=slice_model,
+            dataset=daily,
+            slice_name="Daily Net Operating Cashflow (CNY)",
+            viz_type="line",
+            form_data=_line_form_data(daily.id, "operating_cash_net_inflow_yuan", "Operating Cashflow (CNY)", ",.2f"),
+            description="Public daily disclosure: operating cash net inflow",
+        ),
+        ensure_chart(
+            db_session,
+            slice_model=slice_model,
+            dataset=daily,
+            slice_name="Daily Average Order Value (CNY)",
+            viz_type="line",
+            form_data=_line_form_data(daily.id, "avg_order_value_yuan", "Average Order Value (CNY)", ",.2f"),
+            description="Public daily disclosure: average order value",
+        ),
+        ensure_chart(
+            db_session,
+            slice_model=slice_model,
+            dataset=weekly,
+            slice_name="Weekly Repeat Purchase Rate (%)",
+            viz_type="line",
+            form_data=_line_form_data(weekly.id, "repeat_purchase_rate_pct", "Repeat Purchase Rate (%)", ".2f"),
+            description="Public weekly disclosure: repeat purchase rate",
+        ),
+        ensure_chart(
+            db_session,
+            slice_model=slice_model,
+            dataset=weekly,
+            slice_name="Weekly QC Fail Rate (%)",
+            viz_type="dist_bar",
+            form_data=_bar_form_data(weekly.id, "qc_fail_rate_pct", "QC Fail Rate (%)", ".2f"),
+            description="Public weekly disclosure: quality check fail rate",
+        ),
+        ensure_chart(
+            db_session,
+            slice_model=slice_model,
+            dataset=weekly,
+            slice_name="Weekly Complaint Resolution Hours",
+            viz_type="line",
+            form_data=_line_form_data(weekly.id, "complaint_resolution_hours_avg", "Complaint Resolution Hours", ".2f"),
+            description="Public weekly disclosure: complaint resolution speed",
+        ),
+        ensure_chart(
+            db_session,
+            slice_model=slice_model,
+            dataset=monthly,
+            slice_name="Monthly Inventory Turnover Days",
+            viz_type="dist_bar",
+            form_data=_bar_form_data(monthly.id, "inventory_turnover_days", "Inventory Turnover Days", ".2f"),
+            description="Public monthly disclosure: inventory turnover days",
+        ),
+        ensure_chart(
+            db_session,
+            slice_model=slice_model,
+            dataset=monthly,
+            slice_name="Monthly Slow-moving SKU Ratio (%)",
+            viz_type="line",
+            form_data=_line_form_data(monthly.id, "slow_moving_sku_ratio_pct", "Slow-moving SKU Ratio (%)", ".2f"),
+            description="Public monthly disclosure: slow-moving sku ratio",
+        ),
+        ensure_chart(
+            db_session,
+            slice_model=slice_model,
+            dataset=investor_dim,
+            slice_name="Promotion Phase Revenue Mix (CNY)",
+            viz_type="rose",
+            form_data=_rose_form_data(investor_dim.id, "revenue_yuan", "promotion_phase", "Revenue (CNY)"),
+            description="Investor disclosure: revenue mix by promotion phase",
+        ),
+        ensure_chart(
+            db_session,
+            slice_model=slice_model,
+            dataset=supplier_term,
+            slice_name="Supplier Payment Term Structure (CNY)",
+            viz_type="rose",
+            form_data=_rose_form_data(supplier_term.id, "settlement_yuan", "payment_term_bucket", "Settlement (CNY)"),
+            description="Supplier payment term structure",
+        ),
+    ]
 
     ensure_dashboard(
         db_session,
         dashboard_model=dashboard_model,
-        charts=[chart_daily_revenue, chart_refund_rate, chart_investor_mix],
+        charts=charts,
     )
 
 
@@ -291,6 +448,7 @@ def main() -> None:
             slice_model=Slice,
             dashboard_model=Dashboard,
         )
+        write_template_file()
 
 
 if __name__ == "__main__":
