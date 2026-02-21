@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from fnmatch import fnmatch
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
@@ -117,9 +118,20 @@ def _derive_values(action: str, payload: dict[str, Any]) -> dict[str, Any]:
     return derived
 
 
+def _allow_rule(rule_id: str, action: str, description: str, actor_types: list[ActorType]) -> GovernanceRule:
+    return GovernanceRule(
+        rule_id=rule_id,
+        action=action,
+        description=description,
+        required_actor_types=actor_types,
+        required_signer="any",
+        approval_chain=[],
+    )
+
+
 DEFAULT_GOVERNANCE_POLICY = GovernancePolicy(
-    policy_id="governance_policy_v1",
-    version="1.0.0",
+    policy_id="governance_policy_v2",
+    version="2.0.0",
     rules=[
         GovernanceRule(
             rule_id="procurement_gt_5000_human",
@@ -154,6 +166,36 @@ DEFAULT_GOVERNANCE_POLICY = GovernancePolicy(
             required_signer="human",
             approval_chain=["human"],
         ),
+        _allow_rule("allow_event_procurement_ordered", "event:ProcurementOrdered", "Allow procurement events below high-risk threshold", ["agent", "human"]),
+        _allow_rule("allow_event_goods_received", "event:GoodsReceived", "Allow goods received logging", ["agent", "human"]),
+        _allow_rule("allow_event_order_placed", "event:OrderPlaced", "Allow order placement logging", ["agent", "human"]),
+        _allow_rule("allow_event_payment_captured", "event:PaymentCaptured", "Allow payment captured logging", ["agent", "human"]),
+        _allow_rule("allow_event_shipment_dispatched", "event:ShipmentDispatched", "Allow shipment dispatch logging", ["agent", "human"]),
+        _allow_rule("allow_event_refund_issued", "event:RefundIssued", "Allow refund logging", ["agent", "human"]),
+        _allow_rule("allow_event_inventory_adjusted", "event:InventoryAdjusted", "Allow inventory adjustments", ["agent", "human"]),
+        _allow_rule(
+            "allow_event_disclosure_published",
+            "event:DisclosurePublished",
+            "Allow disclosure publication",
+            ["agent", "human", "auditor"],
+        ),
+        _allow_rule("allow_event_supplier_contract_signed", "event:SupplierContractSigned", "Allow supplier contract sign event", ["human"]),
+        _allow_rule("allow_event_policy_updated", "event:PolicyUpdated", "Allow policy update event", ["agent", "human"]),
+        _allow_rule("allow_event_complaint_logged", "event:ComplaintLogged", "Allow complaint logging", ["agent", "human"]),
+        _allow_rule("allow_event_customer_conflict_reported", "event:CustomerConflictReported", "Allow customer conflict logging", ["agent", "human"]),
+        _allow_rule("allow_event_company_compensation_issued", "event:CompanyCompensationIssued", "Allow compensation event", ["agent", "human"]),
+        _allow_rule("allow_event_selective_disclosure_revealed", "event:SelectiveDisclosureRevealed", "Allow selective disclosure audit trail", ["human", "auditor", "system"]),
+        _allow_rule("allow_event_orchestrator_state_changed", "event:OrchestratorStateChanged", "Allow orchestrator state transitions", ["agent", "human"]),
+        _allow_rule("allow_event_tool_invocation_logged", "event:ToolInvocationLogged", "Allow tool invocation logs", ["agent", "human", "system"]),
+        _allow_rule("allow_event_demo_initialized", "event:DemoScenarioInitialized", "Allow demo bootstrap marker", ["system"]),
+        _allow_rule("allow_tool_payment_capture", "tool:payment.capture", "Allow payment capture tool", ["agent", "human"]),
+        _allow_rule("allow_tool_payment_refund", "tool:payment.refund", "Allow payment refund tool", ["agent", "human"]),
+        _allow_rule("allow_tool_logistics_dispatch", "tool:logistics.dispatch", "Allow logistics dispatch tool", ["agent", "human"]),
+        _allow_rule("allow_tool_logistics_track", "tool:logistics.track", "Allow logistics tracking tool", ["agent", "human", "auditor"]),
+        _allow_rule("allow_tool_ecommerce_accept_order", "tool:ecommerce.accept_order", "Allow ecommerce order acceptance", ["agent", "human"]),
+        _allow_rule("allow_tool_ecommerce_sync_inventory", "tool:ecommerce.sync_inventory", "Allow ecommerce inventory sync", ["agent", "human"]),
+        _allow_rule("allow_tool_supplier_place_order", "tool:supplier.place_order", "Allow supplier placement tool", ["agent", "human"]),
+        _allow_rule("allow_tool_supplier_request_quote", "tool:supplier.request_quote", "Allow supplier quote requests", ["agent", "human", "auditor"]),
     ],
 )
 
@@ -196,7 +238,7 @@ class GovernancePolicyEngine:
         }
 
         for rule in self.policy.rules:
-            if rule.action != action:
+            if not fnmatch(action, rule.action):
                 continue
             if rule.conditions and not all(_matches(cond, context) for cond in rule.conditions):
                 continue
@@ -246,13 +288,13 @@ class GovernancePolicyEngine:
             )
 
         return GovernanceDecision(
-            allowed=True,
+            allowed=False,
             policy_id=self.policy.policy_id,
             policy_version=self.policy.version,
             policy_hash=self._policy_hash,
             action=action,
             matched_rule_id=None,
-            reason="allowed by default (no matched rule)",
+            reason="denied by default (no matched rule)",
         )
 
 

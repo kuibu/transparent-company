@@ -12,6 +12,7 @@ from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
 from app.agent.connectors import get_connector
+from app.core.config import get_settings
 from app.core.key_management import expected_signer_role
 from app.core.security import Actor
 from app.disclosure.publisher import publish_disclosure_run
@@ -28,7 +29,6 @@ DEFAULT_SCENARIO_VERSION = "3.1.0"
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SOUL_ROOT = REPO_ROOT / "透明超市"
-EXPORT_ROOT = Path(__file__).resolve().parent / "exports"
 
 SUPPLIERS = [
     {
@@ -91,6 +91,19 @@ def _json_dump(value: Any) -> str:
 
 def _sha256_json(value: Any) -> str:
     return sha256(_json_dump(value).encode("utf-8")).hexdigest()
+
+
+def _export_root() -> Path:
+    root = Path(get_settings().demo_exports_root).expanduser()
+    root.mkdir(parents=True, exist_ok=True)
+    return root
+
+
+def _display_path(path: Path) -> str:
+    try:
+        return path.relative_to(REPO_ROOT).as_posix()
+    except ValueError:
+        return str(path)
 
 
 def _append(
@@ -480,7 +493,7 @@ def _export_story_artifacts(
     bank_transactions: list[dict[str, Any]],
     soul_manifest: list[dict[str, Any]],
 ) -> dict[str, str]:
-    EXPORT_ROOT.mkdir(parents=True, exist_ok=True)
+    export_root = _export_root()
 
     events = _scenario_events_for_export(session, disclosure_ids)
 
@@ -519,14 +532,14 @@ def _export_story_artifacts(
             }
         )
 
-    events_json_path = EXPORT_ROOT / "david_transparent_supermarket_q1_q2_events.json"
-    events_csv_path = EXPORT_ROOT / "david_transparent_supermarket_q1_q2_events.csv"
-    bank_csv_path = EXPORT_ROOT / "david_transparent_supermarket_q1_q2_bank_transactions.csv"
-    bank_json_path = EXPORT_ROOT / "david_transparent_supermarket_q1_q2_bank_transactions.json"
-    suppliers_csv_path = EXPORT_ROOT / "david_transparent_supermarket_suppliers.csv"
-    customers_csv_path = EXPORT_ROOT / "david_transparent_supermarket_customers.csv"
-    soul_json_path = EXPORT_ROOT / "david_transparent_supermarket_soul_manifest.json"
-    superset_template_path = EXPORT_ROOT / "david_transparent_supermarket_superset_dashboard_template.json"
+    events_json_path = export_root / "david_transparent_supermarket_q1_q2_events.json"
+    events_csv_path = export_root / "david_transparent_supermarket_q1_q2_events.csv"
+    bank_csv_path = export_root / "david_transparent_supermarket_q1_q2_bank_transactions.csv"
+    bank_json_path = export_root / "david_transparent_supermarket_q1_q2_bank_transactions.json"
+    suppliers_csv_path = export_root / "david_transparent_supermarket_suppliers.csv"
+    customers_csv_path = export_root / "david_transparent_supermarket_customers.csv"
+    soul_json_path = export_root / "david_transparent_supermarket_soul_manifest.json"
+    superset_template_path = export_root / "david_transparent_supermarket_superset_dashboard_template.json"
 
     events_json_path.write_text(json.dumps(event_json_rows, ensure_ascii=False, indent=2), encoding="utf-8")
     _write_csv(
@@ -584,14 +597,14 @@ def _export_story_artifacts(
     )
 
     return {
-        "events_json": events_json_path.relative_to(REPO_ROOT).as_posix(),
-        "events_csv": events_csv_path.relative_to(REPO_ROOT).as_posix(),
-        "bank_transactions_csv": bank_csv_path.relative_to(REPO_ROOT).as_posix(),
-        "bank_transactions_json": bank_json_path.relative_to(REPO_ROOT).as_posix(),
-        "suppliers_csv": suppliers_csv_path.relative_to(REPO_ROOT).as_posix(),
-        "customers_csv": customers_csv_path.relative_to(REPO_ROOT).as_posix(),
-        "soul_manifest_json": soul_json_path.relative_to(REPO_ROOT).as_posix(),
-        "superset_template_json": superset_template_path.relative_to(REPO_ROOT).as_posix(),
+        "events_json": _display_path(events_json_path),
+        "events_csv": _display_path(events_csv_path),
+        "bank_transactions_csv": _display_path(bank_csv_path),
+        "bank_transactions_json": _display_path(bank_json_path),
+        "suppliers_csv": _display_path(suppliers_csv_path),
+        "customers_csv": _display_path(customers_csv_path),
+        "soul_manifest_json": _display_path(soul_json_path),
+        "superset_template_json": _display_path(superset_template_path),
     }
 
 
@@ -631,7 +644,59 @@ def _refresh_superset_recommendations(result: dict[str, Any]) -> None:
     result["superset"] = superset
 
 
-def _build_existing_response(session: Session, marker: LedgerEventModel) -> dict[str, Any]:
+def _apply_public_detail_level(result: dict[str, Any], detail_level: str) -> dict[str, Any]:
+    mode = (detail_level or "summary").strip().lower()
+    if mode not in {"summary", "full"}:
+        raise ValueError("detail_level must be summary or full")
+
+    out = deepcopy(result)
+    out["public_detail_level"] = mode
+    out["available_public_detail_levels"] = ["summary", "full"]
+
+    if mode == "full":
+        return out
+
+    bank_transactions = out.pop("bank_transactions", [])
+    customers = out.pop("customers", [])
+    partners = out.pop("partners", [])
+
+    bank_inflow = sum(int(item.get("amount_cents", 0)) for item in bank_transactions if item.get("direction") == "in")
+    bank_outflow = sum(int(item.get("amount_cents", 0)) for item in bank_transactions if item.get("direction") == "out")
+
+    out["customer_summary"] = {
+        "customer_count": len(customers),
+        "note": "summary mode hides identifiable customer names",
+    }
+    out["bank_transaction_summary"] = {
+        "tx_count": len(bank_transactions),
+        "inflow_cents": bank_inflow,
+        "outflow_cents": bank_outflow,
+        "net_cents": bank_inflow - bank_outflow,
+        "note": "summary mode hides counterparty-level bank details",
+    }
+    categories = sorted({str(item.get("category")) for item in partners if item.get("category")})
+    regions = sorted({str(item.get("region")) for item in partners if item.get("region")})
+    out["supplier_summary"] = {
+        "supplier_count": len(partners),
+        "category_count": len(categories),
+        "region_count": len(regions),
+        "categories": categories,
+        "regions": regions,
+        "note": "summary mode hides identifiable supplier names",
+    }
+
+    data_exports = dict(out.get("data_exports", {}))
+    if data_exports:
+        out["data_exports"] = {
+            "soul_manifest_json": data_exports.get("soul_manifest_json"),
+            "superset_template_json": data_exports.get("superset_template_json"),
+            "note": "full event/bank/customer exports are available in detail_level=full",
+        }
+
+    return out
+
+
+def _build_existing_response(session: Session, marker: LedgerEventModel, detail_level: str = "summary") -> dict[str, Any]:
     payload = deepcopy(marker.payload or {})
     result = deepcopy(payload.get("result", {}))
     key_event_ids = payload.get("key_event_ids", [])
@@ -671,13 +736,13 @@ def _build_existing_response(session: Session, marker: LedgerEventModel) -> dict
 
     _refresh_superset_recommendations(result)
 
-    return result
+    return _apply_public_detail_level(result, detail_level)
 
 
-def seed_default_scenario(session: Session) -> dict[str, Any]:
+def seed_default_scenario(session: Session, detail_level: str = "full") -> dict[str, Any]:
     marker = _marker_event(session)
     if marker is not None:
-        return _build_existing_response(session, marker)
+        return _build_existing_response(session, marker, detail_level=detail_level)
 
     ceo = Actor(type="agent", id="agent-david-ceo")
     sales_agent = Actor(type="agent", id="agent-sales-001")
@@ -1859,11 +1924,11 @@ def seed_default_scenario(session: Session) -> dict[str, Any]:
         tool_trace={"scenario_id": DEFAULT_SCENARIO_ID},
     )
 
-    return result
+    return _apply_public_detail_level(result, detail_level)
 
 
-def get_default_scenario_story(session: Session) -> dict[str, Any]:
+def get_default_scenario_story(session: Session, detail_level: str = "summary") -> dict[str, Any]:
     marker = _marker_event(session)
     if marker is None:
-        return seed_default_scenario(session)
-    return _build_existing_response(session, marker)
+        return seed_default_scenario(session, detail_level=detail_level)
+    return _build_existing_response(session, marker, detail_level=detail_level)

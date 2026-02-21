@@ -104,6 +104,17 @@ DEFAULT_POLICIES: dict[str, DisclosurePolicy] = {
         delay_days=0,
         proof_level="selective_disclosure_ready",
     ),
+    "policy_public_root_only_v1": DisclosurePolicy(
+        policy_id="policy_public_root_only_v1",
+        version="1.0.0",
+        audience="public",
+        time_granularity="day",
+        allowed_metrics=COMMON_METRICS,
+        allowed_group_by=COMMON_GROUP_BY,
+        redaction=RedactionRules(hide_customer_ref=True, hide_supplier_id=True, hide_unit_cost=True, allow_sku=False),
+        delay_days=1,
+        proof_level="root_only",
+    ),
 }
 
 

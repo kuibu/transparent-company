@@ -107,9 +107,22 @@ OpenViking 开源项目：`https://github.com/volcengine/openviking`
 
 说明：
 - `docker-compose.yml` 已内置 `openviking` 服务，默认地址为 `http://openviking:1933`。
+- 当前仓库运行的是 OpenViking-compatible HTTP service（接口兼容层），用于开箱即用；如需切到官方 OpenViking 实例，可仅替换 `TC_OPENVIKING_BASE_URL`。
 - `app` 会在 `openviking` 健康后启动，默认直接使用 OpenViking 记忆后端。
 - 若 OpenViking 临时不可达，系统仍会自动回退到本地记忆后端，不影响 API 使用。
 - 当前实现对接 OpenViking HTTP 接口族：`/health`、`/api/v1/sessions`、`/messages`、`/commit`、`/search`。
+
+### API 鉴权（新增）
+敏感接口不再信任 `X-Actor-Type` 头，而是使用 API Key 身份映射：
+- `tc-agent-dev-key`
+- `tc-human-dev-key`
+- `tc-auditor-dev-key`
+- `tc-system-dev-key`
+
+示例：
+```bash
+curl -H "X-API-Key: tc-human-dev-key" http://localhost:8000/ledger/full/events
+```
 
 ### Demo（端到端）
 服务启动后会自动自举默认故事数据（`TC_BOOTSTRAP_DEMO_ON_STARTUP=true`）：
@@ -135,10 +148,22 @@ OpenViking 开源项目：`https://github.com/volcengine/openviking`
 curl http://localhost:8000/demo/default/story
 ```
 
+公开层“汇总/全明细”可选（用户选择）：
+```bash
+# 汇总模式（默认，隐藏客户与银行对手方明细）
+curl "http://localhost:8000/demo/default/story?detail_level=summary"
+
+# 全明细实时模式（显式选择后返回完整细节）
+curl "http://localhost:8000/demo/default/story?detail_level=full"
+curl "http://localhost:8000/ledger/public/events?detail_level=full"
+```
+
 查看默认数据资产（CSV/JSON 导出路径 + 灵魂文件清单）：
 ```bash
 curl http://localhost:8000/demo/default/assets
 ```
+
+说明：demo 导出默认写入 `TC_DEMO_EXPORTS_ROOT`（docker 默认 `/tmp/transparent-company/demo-exports`），避免运行/测试时污染仓库跟踪文件。
 
 获取 Superset 导入模板（JSON）：
 ```bash
@@ -182,6 +207,10 @@ python scripts/verify_disclosure.py \
 ```bash
 curl http://localhost:8000/anchor/disclosure/<disclosure_id>
 ```
+
+锚定行为（新增）：
+- 默认 `TC_ANCHOR_STRICT=true`，immudb 写入失败将直接报错（fail-closed），不会静默回退 fake。
+- 仅在显式关闭 strict 时，才允许故障回退用于本地调试。
 
 ### Superset（已固化自动注册）
 容器初始化时自动完成：
@@ -237,6 +266,10 @@ curl http://localhost:8000/anchor/disclosure/<disclosure_id>
 - `POST /agent/memory/conversations/{conversation_id}/commit`
 - `GET  /agent/memory/conversations/{conversation_id}/memory/search?q=...`
 
+选择性披露安全约束（新增）：
+- `selective/request` 与 `selective/reveal` 仅接受 `human/auditor` API key。
+- 授权 token 为一次性（single-use）：首次 reveal 成功后即失效，重放会返回 `409`.
+
 ### 测试
 ```bash
 PYTHONPATH=/workspace pytest -q
@@ -255,6 +288,8 @@ PYTHONPATH=/workspace pytest -q
 - 披露口径由 policy 控制并版本化
 - 选择性披露需授权，并写审计事件
 - 历史事件不可修改，只能追加纠偏事件
+- `proof_level=root_only` 的披露禁止 proof API 返回明细路径
+- 治理引擎改为 default-deny（未匹配动作默认拒绝）
 
 ---
 
@@ -361,9 +396,22 @@ Default config:
 
 Notes:
 - `docker-compose.yml` now includes a built-in `openviking` service (default: `http://openviking:1933`).
+- This repository runs an OpenViking-compatible HTTP service out of the box; to use an official OpenViking deployment, only change `TC_OPENVIKING_BASE_URL`.
 - The `app` service waits for OpenViking health and uses it as the default memory backend.
 - If OpenViking is temporarily unavailable, the system automatically falls back to local memory.
 - Current integration covers OpenViking HTTP endpoints: `/health`, `/api/v1/sessions`, `/messages`, `/commit`, `/search`.
+
+### API Authentication (New)
+Sensitive endpoints no longer trust `X-Actor-Type`; they use API key identity mapping:
+- `tc-agent-dev-key`
+- `tc-human-dev-key`
+- `tc-auditor-dev-key`
+- `tc-system-dev-key`
+
+Example:
+```bash
+curl -H "X-API-Key: tc-human-dev-key" http://localhost:8000/ledger/full/events
+```
 
 ### End-to-End Demo
 On startup, the stack auto-bootstraps the default storyline (`TC_BOOTSTRAP_DEMO_ON_STARTUP=true`):
@@ -389,10 +437,22 @@ Inspect the default storyline:
 curl http://localhost:8000/demo/default/story
 ```
 
+Public disclosure mode is user-selectable:
+```bash
+# Summary mode (default; hides customer/bank counterparty details)
+curl "http://localhost:8000/demo/default/story?detail_level=summary"
+
+# Full realtime detail mode (explicit user choice)
+curl "http://localhost:8000/demo/default/story?detail_level=full"
+curl "http://localhost:8000/ledger/public/events?detail_level=full"
+```
+
 Inspect exported demo assets (CSV/JSON paths + soul manifest):
 ```bash
 curl http://localhost:8000/demo/default/assets
 ```
+
+Note: demo exports are written to `TC_DEMO_EXPORTS_ROOT` (docker default: `/tmp/transparent-company/demo-exports`) to avoid mutating tracked repository files during runs/tests.
 
 Get Superset dashboard import template (JSON):
 ```bash
@@ -436,6 +496,10 @@ Lookup API:
 ```bash
 curl http://localhost:8000/anchor/disclosure/<disclosure_id>
 ```
+
+Anchoring behavior (new):
+- Default `TC_ANCHOR_STRICT=true` is fail-closed: immudb anchor failures return error instead of silent fake fallback.
+- Non-strict fallback is available only when explicitly disabled for local debugging.
 
 ### Superset (Auto-Bootstrapped)
 During container init, the system automatically:
@@ -491,6 +555,10 @@ If you run `docker compose down -v`, business data volumes are cleared; on next 
 - `POST /agent/memory/conversations/{conversation_id}/commit`
 - `GET  /agent/memory/conversations/{conversation_id}/memory/search?q=...`
 
+Selective disclosure security (new):
+- `selective/request` and `selective/reveal` accept only `human/auditor` API keys.
+- The reveal token is single-use; replay attempts return `409`.
+
 ### Tests
 ```bash
 PYTHONPATH=/workspace pytest -q
@@ -509,3 +577,5 @@ Coverage:
 - Disclosure granularity is policy-controlled and versioned
 - Selective disclosure requires authorization and audit trail
 - Historical events are immutable; corrections are append-only
+- `proof_level=root_only` disclosures do not serve proof paths from the proof API
+- Governance engine is now default-deny for unmatched actions

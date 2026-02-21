@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
@@ -56,8 +58,35 @@ def list_full_events(
 @router.get("/ledger/public/events")
 def list_public_events(
     limit: int = Query(default=100, ge=1, le=1000),
+    detail_level: Literal["summary", "full"] = Query(default="summary"),
     session: Session = Depends(get_session),
 ):
+    if detail_level == "full":
+        stmt = select(LedgerEventModel).order_by(desc(LedgerEventModel.seq_id)).limit(limit)
+        rows = list(session.scalars(stmt).all())
+        return {
+            "ledger": "public_full_detail",
+            "count": len(rows),
+            "detail_level": detail_level,
+            "events": [
+                {
+                    "seq_id": row.seq_id,
+                    "event_id": row.event_id,
+                    "event_type": row.event_type,
+                    "occurred_at": row.occurred_at.isoformat().replace("+00:00", "Z"),
+                    "actor": {"type": row.actor_type, "id": row.actor_id},
+                    "policy_id": row.policy_id,
+                    "payload": row.payload,
+                    "tool_trace": row.tool_trace,
+                    "prev_hash": row.prev_hash,
+                    "event_hash": row.event_hash,
+                    "signature": row.signature,
+                }
+                for row in rows
+            ],
+            "note": "User-selected full-detail public mode. This exposes all ledger event details in real time.",
+        }
+
     stmt = (
         select(LedgerEventModel)
         .where(LedgerEventModel.event_type == "DisclosurePublished")
@@ -90,8 +119,9 @@ def list_public_events(
     return {
         "ledger": "public",
         "count": len(items),
+        "detail_level": detail_level,
         "events": items,
-        "note": "Public ledger exposes commitments and aggregate disclosure only; no raw internal details.",
+        "note": "Public ledger summary mode exposes commitments and aggregate disclosure only.",
     }
 
 

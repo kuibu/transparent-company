@@ -23,6 +23,7 @@ def configure_test_engine(test_db_path: Path):
     settings.anchor_mode = "fake"
     settings.receipt_backend = "local"
     settings.receipts_dir = test_db_path.parent / "receipts"
+    settings.demo_exports_root = test_db_path.parent / "demo_exports"
 
     engine = create_engine(
         f"sqlite+pysqlite:///{test_db_path}",
@@ -52,3 +53,14 @@ def client(configure_test_engine):
 def session(configure_test_engine):
     with pg.session_scope() as s:
         yield s
+
+
+@pytest.fixture()
+def auth_headers():
+    settings = get_settings()
+    return {
+        "agent": {"X-API-Key": settings.agent_api_key},
+        "human": {"X-API-Key": settings.human_api_key},
+        "auditor": {"X-API-Key": settings.auditor_api_key},
+        "system": {"X-API-Key": settings.system_api_key},
+    }

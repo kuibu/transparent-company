@@ -107,16 +107,21 @@ class AnchoringService:
         self.client = client or self._build_client()
 
     def _build_client(self) -> AnchorClient:
-        mode = get_settings().anchor_mode
+        settings = get_settings()
+        mode = settings.anchor_mode
         if mode == "immudb_py":
             try:
                 return ImmudbPyAnchorClient()
             except Exception as exc:
+                if settings.anchor_strict:
+                    raise RuntimeError(f"immudb_py unavailable in strict mode: {exc}") from exc
                 logger.warning("immudb_py unavailable, falling back to fake: %s", exc)
         if mode == "immudb_cli":
             try:
                 return ImmudbCliAnchorClient()
             except Exception as exc:
+                if settings.anchor_strict:
+                    raise RuntimeError(f"immudb_cli unavailable in strict mode: {exc}") from exc
                 logger.warning("immudb_cli unavailable, falling back to fake: %s", exc)
         return FakeAnchorClient()
 
@@ -142,6 +147,10 @@ class AnchoringService:
         try:
             result = self.client.set(key, value)
         except Exception as exc:
+            if get_settings().anchor_strict and self.client.backend != "fake":
+                raise RuntimeError(
+                    f"anchor write failed on backend={self.client.backend} in strict mode"
+                ) from exc
             logger.warning("anchor write failed on backend=%s, fallback to fake: %s", self.client.backend, exc)
             self.client = FakeAnchorClient()
             result = self.client.set(key, value)

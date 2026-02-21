@@ -16,6 +16,7 @@ def main() -> None:
     parser.add_argument("--period", required=True, help="start/end in ISO")
     parser.add_argument("--group-by", default="channel")
     parser.add_argument("--metric-key", default="revenue_cents")
+    parser.add_argument("--api-key", default="tc-agent-dev-key", help="API key for authenticated publish endpoint")
     args = parser.parse_args()
 
     publish_resp = requests.post(
@@ -25,6 +26,7 @@ def main() -> None:
             "period": args.period,
             "group_by": [g.strip() for g in args.group_by.split(",") if g.strip()],
         },
+        headers={"X-API-Key": args.api_key},
         timeout=60,
     )
     publish_resp.raise_for_status()

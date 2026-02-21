@@ -132,6 +132,19 @@ class AnchorRecordModel(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
+class SelectiveRevealTokenModel(Base):
+    __tablename__ = "selective_reveal_tokens"
+
+    token_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    disclosure_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    subject: Mapped[str] = mapped_column(String(128), nullable=False)
+    issued_to_actor_type: Mapped[str] = mapped_column(String(16), nullable=False)
+    issued_to_actor_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    used_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
 class SelectiveRevealAuditModel(Base):
     __tablename__ = "selective_reveal_audit"
 
@@ -193,6 +206,8 @@ Index("ix_ledger_events_occurred_at", LedgerEventModel.occurred_at)
 Index("ix_ledger_events_event_type", LedgerEventModel.event_type)
 Index("ix_disclosure_metric_key", DisclosureMetricModel.metric_key)
 Index("ix_disclosure_grouped_metric_key", DisclosureGroupedMetricModel.metric_key)
+Index("ix_selective_reveal_tokens_disclosure", SelectiveRevealTokenModel.disclosure_id)
+Index("ix_selective_reveal_tokens_expires", SelectiveRevealTokenModel.expires_at)
 Index("ix_agent_conversations_agent_id", AgentConversationModel.agent_id)
 Index("ix_agent_messages_conversation_id", AgentMessageModel.conversation_id)
 Index("ix_agent_messages_created_at", AgentMessageModel.created_at)

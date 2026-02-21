@@ -107,6 +107,11 @@ def get_disclosure_proof(
     run = session.get(DisclosureRunModel, disclosure_id)
     if not run:
         raise HTTPException(status_code=404, detail="disclosure not found")
+
+    policy = get_policy(run.policy_id)
+    if policy.proof_level == "root_only":
+        raise HTTPException(status_code=403, detail="proof disabled by policy (root_only)")
+
     group_dict = normalize_group_param(group)
     key = proof_lookup_key(metric_key, group_dict)
     proof_item = run.proof_index.get(key)
@@ -125,11 +130,22 @@ def get_disclosure_proof(
 def selective_request(
     disclosure_id: str,
     subject: str = Query(default="auditor-demo"),
+    actor: Actor = Depends(get_actor),
     session: Session = Depends(get_session),
 ):
-    if session.get(DisclosureRunModel, disclosure_id) is None:
+    run = session.get(DisclosureRunModel, disclosure_id)
+    if run is None:
         raise HTTPException(status_code=404, detail="disclosure not found")
-    return SelectiveDisclosureService(session).request_token(disclosure_id=disclosure_id, subject=subject)
+
+    policy = get_policy(run.policy_id)
+    if policy.proof_level != "selective_disclosure_ready":
+        raise HTTPException(status_code=400, detail="policy does not support selective disclosure")
+
+    return SelectiveDisclosureService(session).request_token(
+        disclosure_id=disclosure_id,
+        subject=subject,
+        actor=actor,
+    )
 
 
 @router.post("/disclosure/{disclosure_id}/selective/reveal")
@@ -139,6 +155,14 @@ def selective_reveal(
     actor: Actor = Depends(get_actor),
     session: Session = Depends(get_session),
 ):
+    run = session.get(DisclosureRunModel, disclosure_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="disclosure not found")
+
+    policy = get_policy(run.policy_id)
+    if policy.proof_level != "selective_disclosure_ready":
+        raise HTTPException(status_code=400, detail="policy does not support selective disclosure")
+
     return SelectiveDisclosureService(session).reveal(
         disclosure_id=disclosure_id,
         token=request.token,

@@ -21,14 +21,48 @@ class Actor(BaseModel):
     id: str
 
 
+def _auth_error(detail: str) -> HTTPException:
+    return HTTPException(status_code=401, detail=detail, headers={"WWW-Authenticate": "Bearer"})
+
+
+def _extract_api_key(authorization: str | None, x_api_key: str | None) -> str | None:
+    if authorization:
+        scheme, _, token = authorization.partition(" ")
+        if scheme.lower() != "bearer" or not token.strip():
+            raise _auth_error("invalid authorization header")
+        return token.strip()
+    if x_api_key and x_api_key.strip():
+        return x_api_key.strip()
+    return None
+
+
+def _actor_from_api_key(api_key: str) -> Actor | None:
+    settings = get_settings()
+    key_map = {
+        settings.agent_api_key: Actor(type="agent", id=settings.agent_actor_id),
+        settings.human_api_key: Actor(type="human", id=settings.human_actor_id),
+        settings.auditor_api_key: Actor(type="auditor", id=settings.auditor_actor_id),
+        settings.system_api_key: Actor(type="system", id=settings.system_actor_id),
+    }
+    return key_map.get(api_key)
+
+
 def get_actor(
-    x_actor_type: str = Header(default="agent"),
-    x_actor_id: str = Header(default="agent-001"),
+    authorization: str | None = Header(default=None),
+    x_api_key: str | None = Header(default=None),
 ) -> Actor:
-    allowed = {"agent", "human", "system", "auditor"}
-    if x_actor_type not in allowed:
-        raise HTTPException(status_code=400, detail="invalid actor type")
-    return Actor(type=x_actor_type, id=x_actor_id)
+    settings = get_settings()
+    if not settings.auth_enabled:
+        return Actor(type="agent", id=settings.agent_actor_id)
+
+    api_key = _extract_api_key(authorization, x_api_key)
+    if not api_key:
+        raise _auth_error("missing api key")
+
+    actor = _actor_from_api_key(api_key)
+    if actor is None:
+        raise _auth_error("invalid api key")
+    return actor
 
 
 def require_human(actor: Actor) -> None:
@@ -36,16 +70,31 @@ def require_human(actor: Actor) -> None:
         raise HTTPException(status_code=403, detail="human signature required")
 
 
+def require_roles(actor: Actor, allowed: set[str], detail: str = "insufficient role") -> None:
+    if actor.type not in allowed:
+        raise HTTPException(status_code=403, detail=detail)
+
+
 def _token_key() -> bytes:
     settings = get_settings()
-    return settings.human_signing_key.encode("utf-8")
+    return settings.token_signing_secret.encode("utf-8")
 
 
-def create_one_time_token(subject: str, disclosure_id: str, ttl_seconds: int) -> str:
+def create_one_time_token(
+    subject: str,
+    disclosure_id: str,
+    ttl_seconds: int,
+    token_id: str,
+    issued_to_actor_type: str,
+    issued_to_actor_id: str,
+) -> str:
     now = int(time.time())
     payload = {
+        "jti": token_id,
         "subject": subject,
         "disclosure_id": disclosure_id,
+        "issued_to_actor_type": issued_to_actor_type,
+        "issued_to_actor_id": issued_to_actor_id,
         "iat": now,
         "exp": now + ttl_seconds,
     }

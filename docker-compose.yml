@@ -62,7 +62,15 @@ services:
       dockerfile: Dockerfile
     environment:
       TC_DATABASE_URL: postgresql+psycopg2://tc:tc@postgres:5432/tc
+      TC_AUTH_ENABLED: "true"
+      TC_AGENT_API_KEY: tc-agent-dev-key
+      TC_HUMAN_API_KEY: tc-human-dev-key
+      TC_AUDITOR_API_KEY: tc-auditor-dev-key
+      TC_SYSTEM_API_KEY: tc-system-dev-key
+      TC_TOKEN_SIGNING_SECRET: transparent-company-dev-token-secret-change-me
+      TC_DEMO_EXPORTS_ROOT: /tmp/transparent-company/demo-exports
       TC_ANCHOR_MODE: immudb_py
+      TC_ANCHOR_STRICT: "true"
       TC_IMMUDB_ADDRESS: immudb
       TC_IMMUDB_PORT: 3322
       TC_IMMUDB_USER: immudb
