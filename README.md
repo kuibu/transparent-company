@@ -101,16 +101,27 @@ OpenViking 开源项目：`https://github.com/volcengine/openviking`
 默认配置：
 - `TC_AGENT_MEMORY_BACKEND=openviking_http`
 - `TC_OPENVIKING_BASE_URL=http://openviking:1933`
+- `TC_OPENVIKING_AUTO_COMMIT=true`
 - `TC_OPENVIKING_FALLBACK_LOCAL=true`
 
-说明：若未接入 OpenViking server，系统会自动回退到本地记忆后端，不影响 API 使用。接入后会自动使用 OpenViking 的 `sessions/messages/commit/search`。
+说明：
+- 当前 `docker-compose.yml` 不内置 `openviking` 服务容器。
+- 若要接入真实 OpenViking，请先独立部署服务，并将 `TC_OPENVIKING_BASE_URL` 指向该地址。
+- 若 OpenViking 不可达，系统会自动回退到本地记忆后端，不影响 API 使用。
+- 接入后系统会使用 OpenViking 的 `sessions/messages/commit/search` 能力。
 
 ### Demo（端到端）
 服务启动后会自动自举默认故事数据（`TC_BOOTSTRAP_DEMO_ON_STARTUP=true`）：
-- 场景 ID：`david_transparent_supermarket_q1_q2_story_v3`
+- 场景 ID：`david_transparent_supermarket_q1_q2_story_v4`
+- 场景版本：`3.1.0`
 - 覆盖两个季度（2025 Q1 + Q2）：采购、收货、销售、退款、过期报损、供应商切换、顾客冲突与赔偿
 - 角色分工：CEO Agent David 主驾驶；Human 法人徐大伟处理高风险/法定动作；Auditor 做数学验证
 - 子 Agent：Sales/QC/Refund/Complaint/Logistics 全部写入同一不可篡改账本
+
+默认披露层级与指标（当前版本）：
+- 披露粒度：`day` + `week` + `month`（同一故事同时输出）
+- 运营维度：`store_id`、`region`、`time_slot`、`promotion_phase`、`channel`、`category`（investor 口径含 `sku`）
+- 指标覆盖：收入、退款率、客单价、复购率、库存周转天数、滞销 SKU 占比、质检不合格率、投诉闭环时长、经营现金净流入、供应商账期结构
 
 **一句话（奶奶版）**
 把公司想成一个透明小菜店：
@@ -137,6 +148,14 @@ curl http://localhost:8000/demo/default/superset-template
 ```bash
 curl -X POST http://localhost:8000/demo/seed
 ```
+
+`/demo/seed` 关键返回字段（建议关注）：
+- `scenario_id` / `scenario_version` / `seeded_now`
+- `public_disclosure.disclosure_id`
+- `investor_disclosure.disclosure_id`
+- `public_daily_disclosures[]` / `public_weekly_disclosures[]` / `public_monthly_disclosures[]`
+- `investor_weekly_disclosures[]` / `investor_monthly_disclosures[]`
+- `superset.dashboard_url`
 
 ### 验证签名 / Root / Proof
 ```bash
@@ -171,16 +190,27 @@ curl http://localhost:8000/anchor/disclosure/<disclosure_id>
   - `public.disclosure_runs`
   - `public.disclosure_metrics`
   - `public.disclosure_grouped_metrics`
-  - `public.disclosure_public_daily_kpi_pretty, public.disclosure_public_weekly_kpi_pretty, public.disclosure_public_monthly_kpi_pretty`
-  - `public.disclosure_investor_revenue_dimension_pretty, public.disclosure_investor_supplier_term_pretty`
-- 自动创建 dashboard：`David Transparent Supermarket - Trust Dashboard`
-  - Daily Revenue Trend (CNY)
-  - Daily Net Operating Cashflow (CNY)
-  - Daily Average Order Value (CNY)
-  - Weekly QC Fail Rate (%)
-  - Supplier Payment Term Structure (CNY)
+  - `public.disclosure_public_daily_kpi_pretty`
+  - `public.disclosure_public_weekly_kpi_pretty`
+  - `public.disclosure_public_monthly_kpi_pretty`
+  - `public.disclosure_investor_revenue_dimension_pretty`
+  - `public.disclosure_investor_supplier_term_pretty`
+- 自动创建 dashboard：`David Transparent Supermarket - Trust Dashboard`（slug: `david-transparent-supermarket-story`）
+- 迁移行为：若历史存在旧 slug `transparent-company-default-story`，初始化时会自动迁移到新 slug 并清理旧默认看板
 
-即使重建容器，数据库连接和 dataset 也会自动恢复。
+默认看板图表（10 个）：
+- Daily Revenue Trend (CNY)
+- Daily Net Operating Cashflow (CNY)
+- Daily Average Order Value (CNY)
+- Weekly Repeat Purchase Rate (%)
+- Weekly QC Fail Rate (%)
+- Weekly Complaint Resolution Hours
+- Monthly Inventory Turnover Days
+- Monthly Slow-moving SKU Ratio (%)
+- Promotion Phase Revenue Mix (CNY)
+- Supplier Payment Term Structure (CNY)
+
+即使重建容器，数据库连接和 datasets 也会自动恢复。
 若执行 `docker compose down -v` 清空业务数据卷，应用在下次启动时会自动重新写入默认故事数据（也可手动调用 `/demo/seed`）。
 
 ### API
@@ -324,16 +354,27 @@ This repo now includes a memory-aware agent conversation layer (HTTP API) so a C
 Default config:
 - `TC_AGENT_MEMORY_BACKEND=openviking_http`
 - `TC_OPENVIKING_BASE_URL=http://openviking:1933`
+- `TC_OPENVIKING_AUTO_COMMIT=true`
 - `TC_OPENVIKING_FALLBACK_LOCAL=true`
 
-If OpenViking server is unavailable, the system automatically falls back to a local memory backend. Once connected, it uses OpenViking `sessions/messages/commit/search` endpoints.
+Notes:
+- Current `docker-compose.yml` does not embed an `openviking` service container.
+- To use a real OpenViking backend, deploy OpenViking separately and point `TC_OPENVIKING_BASE_URL` to it.
+- If OpenViking is unavailable, the system automatically falls back to a local memory backend.
+- Once connected, it uses OpenViking `sessions/messages/commit/search` endpoints.
 
 ### End-to-End Demo
 On startup, the stack auto-bootstraps the default storyline (`TC_BOOTSTRAP_DEMO_ON_STARTUP=true`):
-- Scenario ID: `david_transparent_supermarket_q1_q2_story_v3`
+- Scenario ID: `david_transparent_supermarket_q1_q2_story_v4`
+- Scenario version: `3.1.0`
 - Covers two quarters (2025 Q1 + Q2): procurement, receiving, sales, refunds, expiration loss, supplier switch, customer conflict, compensation
 - Role split: CEO Agent David as primary driver, Human legal representative for high-risk/legal actions, Auditor for math-based verification
 - Sub-agents (Sales/QC/Refund/Complaint/Logistics) all write to the same immutable ledger
+
+Default disclosure scope (current build):
+- Granularity: `day` + `week` + `month` from the same storyline
+- Dimensions: `store_id`, `region`, `time_slot`, `promotion_phase`, `channel`, `category` (plus `sku` for investor views)
+- KPI set: revenue, refund rate, average order value, repeat purchase rate, inventory turnover days, slow-moving SKU ratio, QC fail rate, complaint resolution hours, operating cash net inflow, supplier payment-term structure
 
 **Grandma-friendly explanation**
 Think of this like a transparent grocery shop:
@@ -360,6 +401,14 @@ Re-run seed manually (idempotent):
 ```bash
 curl -X POST http://localhost:8000/demo/seed
 ```
+
+Recommended `/demo/seed` response fields to inspect:
+- `scenario_id` / `scenario_version` / `seeded_now`
+- `public_disclosure.disclosure_id`
+- `investor_disclosure.disclosure_id`
+- `public_daily_disclosures[]` / `public_weekly_disclosures[]` / `public_monthly_disclosures[]`
+- `investor_weekly_disclosures[]` / `investor_monthly_disclosures[]`
+- `superset.dashboard_url`
 
 ### Verify Signature / Root / Proof
 ```bash
@@ -394,14 +443,25 @@ During container init, the system automatically:
   - `public.disclosure_runs`
   - `public.disclosure_metrics`
   - `public.disclosure_grouped_metrics`
-  - `public.disclosure_public_daily_kpi_pretty, public.disclosure_public_weekly_kpi_pretty, public.disclosure_public_monthly_kpi_pretty`
-  - `public.disclosure_investor_revenue_dimension_pretty, public.disclosure_investor_supplier_term_pretty`
-- auto-creates dashboard: `David Transparent Supermarket - Trust Dashboard`
-  - Daily Revenue Trend (CNY)
-  - Daily Net Operating Cashflow (CNY)
-  - Daily Average Order Value (CNY)
-  - Weekly QC Fail Rate (%)
-  - Supplier Payment Term Structure (CNY)
+  - `public.disclosure_public_daily_kpi_pretty`
+  - `public.disclosure_public_weekly_kpi_pretty`
+  - `public.disclosure_public_monthly_kpi_pretty`
+  - `public.disclosure_investor_revenue_dimension_pretty`
+  - `public.disclosure_investor_supplier_term_pretty`
+- auto-creates dashboard: `David Transparent Supermarket - Trust Dashboard` (slug: `david-transparent-supermarket-story`)
+- migration behavior: if legacy slug `transparent-company-default-story` exists, bootstrap automatically migrates to the new slug and removes the old default dashboard
+
+Default dashboard charts (10):
+- Daily Revenue Trend (CNY)
+- Daily Net Operating Cashflow (CNY)
+- Daily Average Order Value (CNY)
+- Weekly Repeat Purchase Rate (%)
+- Weekly QC Fail Rate (%)
+- Weekly Complaint Resolution Hours
+- Monthly Inventory Turnover Days
+- Monthly Slow-moving SKU Ratio (%)
+- Promotion Phase Revenue Mix (CNY)
+- Supplier Payment Term Structure (CNY)
 
 After rebuilding containers, DB connection and datasets are restored automatically.
 If you run `docker compose down -v`, business data volumes are cleared; on next startup the app auto-seeds the default storyline (you can still call `/demo/seed` manually).
