@@ -21,6 +21,10 @@
   - 产品路线图：`/Users/a/repos/transparent-company/docs/PRODUCT_UPDATE_PLAN.md`
   - Skills 说明：`/Users/a/repos/transparent-company/SKILLS.md`
 
+### 吉祥物
+- 本项目吉祥物：**旺财（Wangcai）**，一只中国土狗 🐕。
+- 象征含义：朴素、可靠、守信；对应本项目“可验证、可追溯、不中断”的工程原则。
+
 ### 概括性介绍
 Claude Code 的出现带来了一种重要变化：模型不再只是回答问题的助手，而是能够在终端中读写文件、执行命令、感知系统状态，并在真实环境中动手做事。这意味着，模型从解释者变成了执行者。更重要的是，Claude Code 并不是让模型盲目行动，而是先进入 Plan Mode，先产出可审阅的计划，再执行；同时通过 subagents 把复杂任务分拆，并用精细的权限规则确保模型既能干活，又能被治理、被审计。
 
@@ -424,6 +428,10 @@ docker compose exec app sh -lc 'cd /workspace && python -m app.cli agent run "sk
   - Default dashboard: `http://localhost:8088/superset/dashboard/david-transparent-supermarket-story/`
   - Product roadmap: `/Users/a/repos/transparent-company/docs/PRODUCT_UPDATE_PLAN.md`
   - Skills authoring: `/Users/a/repos/transparent-company/SKILLS.md`
+
+### Project Mascot
+- Official mascot: **Wangcai**, a Chinese native dog 🐕.
+- What it represents: practical reliability and trustworthiness, aligned with this project's verifiable and auditable-by-design principles.
 
 ### Project Overview
 Claude Code introduced an important shift: models are no longer only assistants that answer questions. They can read and write files in terminals, execute commands, observe system state, and act in real environments. In other words, the model moves from explainer to executor. The key is governance: Plan Mode first (reviewable plan before action), subagents for decomposition, and fine-grained permissions for controlled, auditable autonomy.
