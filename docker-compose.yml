@@ -40,9 +40,11 @@ services:
       - minio_data:/data
 
   openviking:
+    image: transparent-company-python:dev
     build:
       context: .
       dockerfile: Dockerfile
+      target: runtime
     environment:
       OPENVIKING_STORE_FILE: /data/openviking_store.json
     command: uvicorn app.agent.openviking_service:app --host 0.0.0.0 --port 1933
@@ -57,9 +59,11 @@ services:
       retries: 20
 
   app:
+    image: transparent-company-python:dev
     build:
       context: .
       dockerfile: Dockerfile
+      target: runtime
     environment:
       TC_DATABASE_URL: postgresql+psycopg2://tc:tc@postgres:5432/tc
       TC_AUTH_ENABLED: "true"

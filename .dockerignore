@@ -1,0 +1,15 @@
+.git
+.github
+.pytest_cache
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.sqlite
+.env
+.venv
+
+# Large/generated demo export artifacts; runtime writes them to /tmp
+app/demo/exports/*.csv
+app/demo/exports/*.json
