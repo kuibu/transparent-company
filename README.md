@@ -187,7 +187,7 @@ python -m app.cli agent run "skill:disclosure 披露昨日汇总 粒度=日"
 
 扩展规范见 `SKILLS.md`。
 
-### Demo（端到端，默认示例）
+### Demo（默认示例）
 这个仓库是“透明公司平台”项目，不是只做超市业务。
 
 当前内置的演示样例是 **David透明超市（两季度故事）**，用于把“可验证经营”讲清楚：
@@ -205,7 +205,7 @@ python -m app.cli agent run "skill:disclosure 披露昨日汇总 粒度=日"
 - 运营维度：`store_id`、`region`、`time_slot`、`promotion_phase`、`channel`、`category`（investor 口径含 `sku`）
 - 指标覆盖：收入、退款率、客单价、复购率、库存周转天数、滞销 SKU 占比、质检不合格率、投诉闭环时长、经营现金净流入、供应商账期结构
 
-**一句话（奶奶版）**
+**用我奶奶都能听懂的话描述**
 这不是“把公司全裸公开”，而是：
 - 日常业务由 David 和子 Agent 自动跑
 - 高风险动作由人类法人把关
