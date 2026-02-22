@@ -25,10 +25,10 @@ from app.persistence.models import LedgerEventModel
 
 
 DEFAULT_SCENARIO_ID = "david_transparent_supermarket_q1_q2_story_v4"
-DEFAULT_SCENARIO_VERSION = "3.1.0"
+DEFAULT_SCENARIO_VERSION = "3.2.0"
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SOUL_ROOT = REPO_ROOT / "透明超市"
+SOUL_ROOT = REPO_ROOT / "transparent_supermarket"
 
 SUPPLIERS = [
     {

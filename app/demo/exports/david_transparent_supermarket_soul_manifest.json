@@ -1,46 +1,46 @@
 [
   {
-    "path": "透明超市/agents/Complaint-Agent-灵魂.md",
+    "path": "transparent_supermarket/agents/complaint-agent-soul.md",
     "sha256": "67cff6685c6de4d131fbbfa1e7b2b40082b53a391014bf5a7d10ef95245e724b",
     "bytes": 227
   },
   {
-    "path": "透明超市/agents/David-CEO-Agent-灵魂.md",
+    "path": "transparent_supermarket/agents/david-ceo-agent-soul.md",
     "sha256": "cb8d3ae9efb696e4e0f51917e5ed6e144d0a9a757dbb15fe571974b7e63bcff6",
     "bytes": 666
   },
   {
-    "path": "透明超市/agents/Logistics-Agent-灵魂.md",
+    "path": "transparent_supermarket/agents/logistics-agent-soul.md",
     "sha256": "d595097f0d008374f9571968c1f83bee664321d375b5ef02751299f40b793f68",
     "bytes": 184
   },
   {
-    "path": "透明超市/agents/QC-Agent-灵魂.md",
+    "path": "transparent_supermarket/agents/qc-agent-soul.md",
     "sha256": "920c44d6dabe5503cb078392d0bae37f98e12af8c4d34b643201f4842b479bf6",
     "bytes": 193
   },
   {
-    "path": "透明超市/agents/Refund-Agent-灵魂.md",
+    "path": "transparent_supermarket/agents/refund-agent-soul.md",
     "sha256": "a845cf5523c871c3e7fd16bec4e6daba0fd91aa2cd5e830ca8d149cedb3240f1",
     "bytes": 173
   },
   {
-    "path": "透明超市/agents/Sales-Agent-灵魂.md",
+    "path": "transparent_supermarket/agents/sales-agent-soul.md",
     "sha256": "f525be178af7232a95db20f4b9211c27fe5d9b39acd053cc9d571d67109104c1",
     "bytes": 220
   },
   {
-    "path": "透明超市/auditor/Auditor-数学验证者-灵魂.md",
+    "path": "transparent_supermarket/auditor/auditor-math-verifier-soul.md",
     "sha256": "2c5cca8a30ba98fb05f56d61da0d6a477adf8943a3a284a565375128d11684e8",
     "bytes": 228
   },
   {
-    "path": "透明超市/humans/徐大伟-现实法人-灵魂.md",
+    "path": "transparent_supermarket/humans/xu-dawei-legal-representative-soul.md",
     "sha256": "f0ea71a24e90f4d8a4ba1853c5fe9369bdc5141d4b4e59666bb3ed9234b7ac4e",
     "bytes": 277
   },
   {
-    "path": "透明超市/灵魂.md",
+    "path": "transparent_supermarket/SOUL.md",
     "sha256": "80640ca22883074ae9273ea4fef1d158ddf1a365a756b1b144f3ca60fffc69e6",
     "bytes": 960
   }

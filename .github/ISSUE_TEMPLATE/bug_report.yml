@@ -1,0 +1,35 @@
+name: Bug Report / 缺陷反馈
+description: Report a reproducible bug / 提交可复现缺陷
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. 感谢反馈，请尽量提供可复现信息。
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary / 问题概述
+      description: What happened? / 发生了什么？
+      placeholder: Briefly describe the issue.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to Reproduce / 复现步骤
+      description: Exact steps and commands. / 提供准确步骤与命令。
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior / 期望结果
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / 日志
+      description: Paste sanitized logs. / 请粘贴已脱敏日志。
+      render: shell

@@ -31,6 +31,15 @@
 - Agent 记忆：通过 OpenViking HTTP 会话（可回退本地）沉淀 CEO 决策记忆与使命上下文
 - Agent + Skills：`SkillRegistry/SkillRouter/SkillExecutor` 插件化执行，且每次运行写入 `SkillRunStarted/SkillRunFinished/SkillRunFailed` 不可变审计事件
 
+### 社区与帮助文档
+- `/Users/a/repos/transparent-company/CONTRIBUTING.md`（贡献流程）
+- `/Users/a/repos/transparent-company/CODE_OF_CONDUCT.md`（社区行为准则）
+- `/Users/a/repos/transparent-company/SECURITY.md`（安全漏洞上报）
+- `/Users/a/repos/transparent-company/SUPPORT.md`（支持与问题反馈）
+- `/Users/a/repos/transparent-company/.github/ISSUE_TEMPLATE/`（中英 issue 模板）
+- `/Users/a/repos/transparent-company/.github/pull_request_template.md`（PR 模板）
+- 参考：[GitHub Docs：Customizing your repository](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository)
+
 ### 架构分层
 - `app/ledger/*`: 事件 schema、canonical JSON、签名、Merkle、anchoring、receipt hash
 - `app/domain/*`: 订单/库存投影、财务分录与 P&L
@@ -82,7 +91,16 @@ app/
 skills/
 scripts/
 tests/
+transparent_supermarket/
+.github/
+  ISSUE_TEMPLATE/
+  pull_request_template.md
+README.md
 SKILLS.md
+CONTRIBUTING.md
+CODE_OF_CONDUCT.md
+SECURITY.md
+SUPPORT.md
 docker-compose.yml
 ```
 
@@ -154,7 +172,7 @@ python -m app.cli agent run "skill:disclosure 披露昨日汇总 粒度=日"
 ### Demo（端到端）
 服务启动后会自动自举默认故事数据（`TC_BOOTSTRAP_DEMO_ON_STARTUP=true`）：
 - 场景 ID：`david_transparent_supermarket_q1_q2_story_v4`
-- 场景版本：`3.1.0`
+- 场景版本：`3.2.0`
 - 覆盖两个季度（2025 Q1 + Q2）：采购、收货、销售、退款、过期报损、供应商切换、顾客冲突与赔偿
 - 角色分工：CEO Agent David 主驾驶；Human 法人徐大伟处理高风险/法定动作；Auditor 做数学验证
 - 子 Agent：Sales/QC/Refund/Complaint/Logistics 全部写入同一不可篡改账本
@@ -354,6 +372,15 @@ It matches an “agent as primary driver + human as copilot” model:
 - Agent memory: OpenViking HTTP sessions (with local fallback) preserve CEO mission and decision memory
 - Agent + Skills runtime: plugin-style `SkillRegistry`/`SkillRouter`/`SkillExecutor` with immutable `SkillRunStarted`/`SkillRunFinished`/`SkillRunFailed` audit events
 
+### Community and Help Docs
+- `/Users/a/repos/transparent-company/CONTRIBUTING.md` (contribution flow)
+- `/Users/a/repos/transparent-company/CODE_OF_CONDUCT.md` (community standards)
+- `/Users/a/repos/transparent-company/SECURITY.md` (security disclosure)
+- `/Users/a/repos/transparent-company/SUPPORT.md` (support and troubleshooting)
+- `/Users/a/repos/transparent-company/.github/ISSUE_TEMPLATE/` (bilingual issue templates)
+- `/Users/a/repos/transparent-company/.github/pull_request_template.md` (PR template)
+- Reference: [GitHub Docs: Customizing your repository](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository)
+
 ### Architecture Layers
 - `app/ledger/*`: event schema, canonical JSON, signing, Merkle, anchoring, receipt hashing
 - `app/domain/*`: order/inventory projections, accounting postings and P&L
@@ -405,7 +432,16 @@ app/
 skills/
 scripts/
 tests/
+transparent_supermarket/
+.github/
+  ISSUE_TEMPLATE/
+  pull_request_template.md
+README.md
 SKILLS.md
+CONTRIBUTING.md
+CODE_OF_CONDUCT.md
+SECURITY.md
+SUPPORT.md
 docker-compose.yml
 ```
 
@@ -477,7 +513,7 @@ See `SKILLS.md` for authoring rules.
 ### End-to-End Demo
 On startup, the stack auto-bootstraps the default storyline (`TC_BOOTSTRAP_DEMO_ON_STARTUP=true`):
 - Scenario ID: `david_transparent_supermarket_q1_q2_story_v4`
-- Scenario version: `3.1.0`
+- Scenario version: `3.2.0`
 - Covers two quarters (2025 Q1 + Q2): procurement, receiving, sales, refunds, expiration loss, supplier switch, customer conflict, compensation
 - Role split: CEO Agent David as primary driver, Human legal representative for high-risk/legal actions, Auditor for math-based verification
 - Sub-agents (Sales/QC/Refund/Complaint/Logistics) all write to the same immutable ledger
