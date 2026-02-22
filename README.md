@@ -1,10 +1,25 @@
 # Transparent Company：把公司变成可运行、可验证的程序
 
+![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)
+![Docker Compose](https://img.shields.io/badge/Docker_Compose-Local%20MVP-2496ED?logo=docker&logoColor=white)
+![Status](https://img.shields.io/badge/Status-Active_Development-2ea44f)
+
 [中文](#zh-cn) | [English](#english)
 
 ---
 
 ## zh-CN
+
+### 项目状态与快速入口
+- 当前状态：`v0.1.x`，活跃开发中（MVP+ 可运行、可验证、可演示）
+- 参考定位：默认以“本地可复现 + 可审计验证”为优先，不承诺即刻生产级 SLA
+- 快速入口：
+  - 启动：`docker compose up -d --build`
+  - 默认示例：`GET /demo/default/story`
+  - 默认看板：`http://localhost:8088/superset/dashboard/david-transparent-supermarket-story/`
+  - 产品路线图：`/Users/a/repos/transparent-company/docs/PRODUCT_UPDATE_PLAN.md`
+  - Skills 说明：`/Users/a/repos/transparent-company/SKILLS.md`
 
 ### 概括性介绍
 Claude Code 的出现带来了一种重要变化：模型不再只是回答问题的助手，而是能够在终端中读写文件、执行命令、感知系统状态，并在真实环境中动手做事。这意味着，模型从解释者变成了执行者。更重要的是，Claude Code 并不是让模型盲目行动，而是先进入 Plan Mode，先产出可审阅的计划，再执行；同时通过 subagents 把复杂任务分拆，并用精细的权限规则确保模型既能干活，又能被治理、被审计。
@@ -46,6 +61,16 @@ Claude Code 通过权限模式实现可控自治，透明公司也必须做到�
 - BI 看板：Superset 直接连接 `disclosure_*` 表与视图
 - Agent 记忆：通过 OpenViking HTTP 会话（可回退本地）沉淀 CEO 决策记忆与使命上下文
 - Agent + Skills：`SkillRegistry/SkillRouter/SkillExecutor` 插件化执行，且每次运行写入 `SkillRunStarted/SkillRunFinished/SkillRunFailed` 不可变审计事件
+
+### 项目定位与边界（保守说明）
+- 这是一个“可验证经营系统”的参考实现与演示工程，重点是机制正确性与可复算性。
+- 默认配置和凭据偏向本地开发体验，不等价于生产安全基线。
+- 如果用于生产，请额外补齐：HSM/KMS 密钥托管、细粒度 IAM、密钥轮换、备份恢复演练、告警与 SLO。
+
+### 运行前提（建议）
+- Docker Engine + Docker Compose v2
+- 建议机器资源：4 vCPU / 8 GB RAM / 15 GB 可用磁盘
+- 需预留端口：`8000`、`8088`、`5432`、`3322`、`9000`、`9001`、`1933`
 
 ### 社区与帮助文档
 - `/Users/a/repos/transparent-company/CONTRIBUTING.md`（贡献流程）
@@ -134,6 +159,20 @@ docker compose up -d --build
 - MinIO Console: `http://localhost:9001`（`minioadmin/minioadmin`）
 - immudb gRPC: `localhost:3322`
 - OpenViking API: `http://localhost:1933`
+
+### 常用运维命令
+```bash
+docker compose ps
+docker compose logs -f app
+docker compose logs -f superset
+docker compose restart app
+docker compose down
+```
+
+清空全部数据卷（仅用于重置演示环境）：
+```bash
+docker compose down -v
+```
 
 ### Agent 记忆（OpenViking）
 OpenViking 开源项目：`https://github.com/volcengine/openviking`
@@ -358,6 +397,12 @@ docker compose exec app sh -lc 'cd /workspace && python -m app.cli agent run "sk
 - e2e demo
 - skills manifest 解析、路由与执行审计事件
 
+### 常见问题快查
+- Superset 页面能打开但看板没数据：先执行 `POST /demo/seed`，再刷新 `david-transparent-supermarket-story`。
+- 容器重建后 datasets 丢失：确认 `superset-init` 容器已成功运行，查看 `docker compose logs superset-init`。
+- immudb 锚定失败：默认 `TC_ANCHOR_STRICT=true` 会直接失败，请优先检查 immudb 可达性与凭据。
+- proof 校验失败：检查使用的 `disclosure_id`、`metric_key` 是否来自同一次披露。
+
 ### 安全与合规边界
 - public 策略不输出客户/供应商可识别信息
 - 披露口径由 policy 控制并版本化
@@ -369,6 +414,16 @@ docker compose exec app sh -lc 'cd /workspace && python -m app.cli agent run "sk
 ---
 
 ## English
+
+### Status and Quick Access
+- Current status: `v0.1.x`, active development (MVP+ is runnable, verifiable, and demo-ready).
+- Positioning: local reproducibility and auditability first; this repository is not claiming production SLA out of the box.
+- Quick access:
+  - Start stack: `docker compose up -d --build`
+  - Default story API: `GET /demo/default/story`
+  - Default dashboard: `http://localhost:8088/superset/dashboard/david-transparent-supermarket-story/`
+  - Product roadmap: `/Users/a/repos/transparent-company/docs/PRODUCT_UPDATE_PLAN.md`
+  - Skills authoring: `/Users/a/repos/transparent-company/SKILLS.md`
 
 ### Project Overview
 Claude Code introduced an important shift: models are no longer only assistants that answer questions. They can read and write files in terminals, execute commands, observe system state, and act in real environments. In other words, the model moves from explainer to executor. The key is governance: Plan Mode first (reviewable plan before action), subagents for decomposition, and fine-grained permissions for controlled, auditable autonomy.
@@ -402,6 +457,16 @@ At the core, Claude Code makes a model runnable in an operating system; Transpar
 - BI dashboards: Superset on top of `disclosure_*` tables/views
 - Agent memory: OpenViking HTTP sessions (with local fallback) preserve CEO mission and decision memory
 - Agent + Skills runtime: plugin-style `SkillRegistry`/`SkillRouter`/`SkillExecutor` with immutable `SkillRunStarted`/`SkillRunFinished`/`SkillRunFailed` audit events
+
+### Scope and Boundaries (Conservative)
+- This is a reference implementation and demo project focused on correctness, replayability, and verifiable disclosure.
+- Defaults and credentials are optimized for local development, not production hardening.
+- For production, add at least: HSM/KMS key custody, stricter IAM, key rotation, backup/restore drills, and SLO-driven monitoring.
+
+### Prerequisites (Recommended)
+- Docker Engine + Docker Compose v2
+- Recommended host: 4 vCPU / 8 GB RAM / 15 GB free disk
+- Required free ports: `8000`, `8088`, `5432`, `3322`, `9000`, `9001`, `1933`
 
 ### Community and Help Docs
 - `/Users/a/repos/transparent-company/CONTRIBUTING.md` (contribution flow)
@@ -490,6 +555,20 @@ Endpoints:
 - MinIO Console: `http://localhost:9001` (`minioadmin/minioadmin`)
 - immudb gRPC: `localhost:3322`
 - OpenViking API: `http://localhost:1933`
+
+### Common Ops Commands
+```bash
+docker compose ps
+docker compose logs -f app
+docker compose logs -f superset
+docker compose restart app
+docker compose down
+```
+
+Wipe all volumes (demo reset only):
+```bash
+docker compose down -v
+```
 
 ### Agent Memory (OpenViking)
 OpenViking open-source project: `https://github.com/volcengine/openviking`
@@ -713,6 +792,12 @@ Coverage:
 - disclosure proof
 - end-to-end demo
 - skills manifest parsing, routing, and execution audit events
+
+### Troubleshooting Quick Checks
+- Superset opens but dashboard is empty: run `POST /demo/seed` and refresh `david-transparent-supermarket-story`.
+- Datasets missing after rebuild: confirm `superset-init` completed successfully via `docker compose logs superset-init`.
+- immudb anchoring fails: with default `TC_ANCHOR_STRICT=true`, failures are fail-closed; verify immudb connectivity and credentials first.
+- Proof verification fails: ensure `disclosure_id` and `metric_key` come from the same disclosure run.
 
 ### Security & Compliance Boundaries
 - Public policy does not expose personally/supplier-identifiable fields
