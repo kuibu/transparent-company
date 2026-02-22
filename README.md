@@ -1,4 +1,4 @@
-# Transparent Company MVP+ / 透明公司 MVP+
+# Transparent Company：把公司变成可运行、可验证的程序
 
 [中文](#zh-cn) | [English](#english)
 
@@ -6,20 +6,36 @@
 
 ## zh-CN
 
-### 项目背景
-传统公司对外披露通常是“结果导向”，外部只能看到报表，很难验证生成过程是否被篡改。
+### 概括性介绍
+Claude Code 的出现带来了一种重要变化：模型不再只是回答问题的助手，而是能够在终端中读写文件、执行命令、感知系统状态，并在真实环境中动手做事。这意味着，模型从解释者变成了执行者。更重要的是，Claude Code 并不是让模型盲目行动，而是先进入 Plan Mode，先产出可审阅的计划，再执行；同时通过 subagents 把复杂任务分拆，并用精细的权限规则确保模型既能干活，又能被治理、被审计。
 
-本项目实现一个“可验证经营”最小可用系统（MVP+）：
-- 内部：全部经营动作进入不可变事件账本（append-only）
-- 对外：按策略做“粒度可选”披露（public / investor / auditor）
-- 可验证：披露项做 Merkle 承诺并提供 proof，声明用 Ed25519 签名
-- 不可篡改封条：将披露 root 与关键回执摘要锚定到 immudb
-- 可视化：用 Apache Superset 读取披露汇总表/视图
+如果把这种模式放到现实世界，会发生什么？
 
-这对应“agent 主驾驶 + human 副驾驶”经营模式：
-- agent 负责高频执行动作（接单、调度、记账草案、披露发布）
-- human 负责法定与高风险动作（规则制定、例外审批、最终签署）
-- auditor/public 无需信任内部人，只需验证数据链路与证明
+透明公司正是对这种思路的延伸。我们不只是让模型在终端操作文件，而是让模型在现实世界中经营一家公司。现实公司就是模型的终端环境，订单、库存、财务数据就是它的文件系统，供应商、银行、物流接口就是它的工具接口。在透明公司里，CEO 是一个 Agent，而人类作为法人，只负责法律与合规事务。人类法人存在的意义，是在当前法律框架下承担法律责任、签署合同和处理线下事务。日常经营的逻辑由 Agent 运行，而不是依赖个人经验或临时判断。经营决策、日常管理、数据处理，都由 Agent 负责。公司不再围绕人类决策，而围绕一个可运行的系统展开。
+
+为了更直观地理解这种类比，可以对照如下：
+
+| Claude Code | 透明公司 |
+| --- | --- |
+| 终端环境 | 现实经营环境 |
+| 文件系统 | 订单 / 库存 / 财务数据 |
+| Plan Mode | 经营计划模式 |
+| Subagents | 子部门 Agent |
+| 权限模式 | 公司治理权限 |
+| MCP 工具连接 | 外部供应商 / 银行 / 物流接口 |
+| 审计日志 | 不可变账本 |
+
+但是，正如 Claude Code 不允许模型直接一把梭执行所有命令，透明公司也必须建立严格的治理结构。每一次经营动作，都要先生成计划，说明影响范围和风险等级，再决定是否执行。低风险事项可以自动执行，高风险事项必须经过人类确认。所有行为都写入不可变事件账本，留下完整的哈希记录和回执。任何人都可以复算经营结果，验证披露数据是否真实。这就像终端里的日志和版本控制一样，公司的一切行为都可追溯。
+
+在 Claude Code 中，subagents 的作用是隔离复杂任务，避免主模型被噪音干扰。透明公司同样需要分工明确的子 Agent，例如采购 Agent、库存 Agent、财务 Agent、披露 Agent。主 CEO Agent 负责总体规划与协调，而具体执行由子 Agent 并行完成，最终只把摘要回传。这种结构既提高效率，也避免决策混乱。
+
+Claude Code 通过权限模式实现可控自治，透明公司也必须做到同样的事情。不同风险等级对应不同权限：生成报表是低风险，资金调拨是高风险，签署合同是关键风险。Agent 可以行动，但每一步都有边界。人类法人不再参与日常经营，而是在关键节点承担法律责任与社会责任。
+
+从本质上看，Claude Code 把模型变成了一个能够运行在操作系统上的程序；透明公司则试图把公司本身变成一个可运行的协议。传统公司依赖人类判断，数据滞后，财报周期性发布；透明公司依赖可验证系统，实时记录，持续披露。公司不再是一个黑箱组织，而是一套可执行、可审计、可验证的机制。
+
+简单地说，如果模型可以接触终端，我们就应该重新思考软件形态；如果模型可以接触现实世界，我们就应该重新思考公司形态。透明公司不是用 AI 做生意，而是让公司本身成为一套由 AI 驱动、由人类治理、由数学保证的运行系统。
+
+我们不是在做一个更聪明的助手，而是在探索一种新的组织结构。
 
 ### 核心能力
 - 事件账本：hash chain（`prev_hash -> event_hash`）+ Ed25519 签名
@@ -347,20 +363,28 @@ docker compose exec app sh -lc 'cd /workspace && python -m app.cli agent run "sk
 
 ## English
 
-### Project Background
-Most corporate disclosure is result-oriented: outsiders see reports, but cannot verify whether the generation process was tampered with.
+### Project Overview
+Claude Code introduced an important shift: models are no longer only assistants that answer questions. They can read and write files in terminals, execute commands, observe system state, and act in real environments. In other words, the model moves from explainer to executor. The key is governance: Plan Mode first (reviewable plan before action), subagents for decomposition, and fine-grained permissions for controlled, auditable autonomy.
 
-This project implements a verifiable operations MVP+:
-- Internal: all operations are recorded in an immutable append-only event ledger
-- External: policy-driven, audience-specific disclosure (public / investor / auditor)
-- Verifiable: each disclosure metric is committed with Merkle root/proof and statements are Ed25519-signed
-- Tamper-evident seal: disclosure roots and critical receipt digests are anchored in immudb
-- Analytics: Apache Superset dashboards read disclosure summary tables/views
+Transparent Company extends this idea to the real world. We are not only letting a model operate files in a terminal; we are letting an agent operate a company in reality. The company is the runtime environment. Orders, inventory, and finance are the file system. Supplier, banking, and logistics integrations are tool interfaces. In Transparent Company, the CEO is an Agent, while the human legal representative focuses on legal and compliance duties. Daily operations are run by the agent system, not by ad-hoc personal judgment.
 
-It matches an “agent as primary driver + human as copilot” model:
-- Agent handles high-frequency operational actions
-- Human handles legal/high-risk/sign-off actions
-- Auditors/public verify proofs instead of trusting insiders
+A direct analogy:
+
+| Claude Code | Transparent Company |
+| --- | --- |
+| Terminal environment | Real operating environment |
+| File system | Orders / inventory / finance data |
+| Plan Mode | Operating plan mode |
+| Subagents | Department agents |
+| Permission modes | Corporate governance permissions |
+| MCP connectors | Supplier / bank / logistics interfaces |
+| Audit logs | Immutable ledger |
+
+Just as Claude Code does not allow blind full-command execution, Transparent Company also needs strict governance. Every operational action should be planned first, with impact and risk level, then executed under policy. Low-risk actions can run automatically; high-risk actions require human confirmation. All actions are written into an immutable event ledger with hash-linked history and receipts. Anyone can recompute results and verify disclosures.
+
+Subagents in Claude Code isolate complexity; Transparent Company follows the same architecture with procurement, inventory, finance, and disclosure agents. The CEO agent plans and coordinates, while subagents execute in parallel and report summaries.
+
+At the core, Claude Code makes a model runnable in an operating system; Transparent Company makes a company runnable as a verifiable protocol. This project explores an AI-driven, human-governed, math-verified organizational form, not just “using AI for business.”
 
 ### Key Capabilities
 - Event ledger: hash chain (`prev_hash -> event_hash`) + Ed25519 signatures
