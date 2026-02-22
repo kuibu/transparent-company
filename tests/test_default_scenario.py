@@ -21,6 +21,7 @@ def test_default_scenario_seed_and_story(client):
     assert human_signoffs
 
     assert payload["soul_manifest"]
+    assert all(item["path"].startswith("examples/transparent_supermarket/") for item in payload["soul_manifest"])
     assert payload["company"]["soul_manifest_hash"]
     assert payload["data_exports"]["events_json"].endswith("david_transparent_supermarket_q1_q2_events.json")
 

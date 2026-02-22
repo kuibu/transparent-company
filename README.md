@@ -55,6 +55,7 @@ Claude Code 通过权限模式实现可控自治，透明公司也必须做到�
 - `/Users/a/repos/transparent-company/.github/ISSUE_TEMPLATE/`（中英 issue 模板）
 - `/Users/a/repos/transparent-company/.github/pull_request_template.md`（PR 模板）
 - 参考：[GitHub Docs：Customizing your repository](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository)
+- `/Users/a/repos/transparent-company/docs/PRODUCT_UPDATE_PLAN.md`（产品缺口分析与路线图）
 
 ### 架构分层
 - `app/ledger/*`: 事件 schema、canonical JSON、签名、Merkle、anchoring、receipt hash
@@ -107,7 +108,8 @@ app/
 skills/
 scripts/
 tests/
-transparent_supermarket/
+docs/
+examples/transparent_supermarket/
 .github/
   ISSUE_TEMPLATE/
   pull_request_template.md
@@ -185,13 +187,18 @@ python -m app.cli agent run "skill:disclosure 披露昨日汇总 粒度=日"
 
 扩展规范见 `SKILLS.md`。
 
-### Demo（端到端）
-服务启动后会自动自举默认故事数据（`TC_BOOTSTRAP_DEMO_ON_STARTUP=true`）：
+### Demo（端到端，默认示例）
+这个仓库是“透明公司平台”项目，不是只做超市业务。
+
+当前内置的演示样例是 **David透明超市（两季度故事）**，用于把“可验证经营”讲清楚：
 - 场景 ID：`david_transparent_supermarket_q1_q2_story_v4`
-- 场景版本：`3.2.0`
-- 覆盖两个季度（2025 Q1 + Q2）：采购、收货、销售、退款、过期报损、供应商切换、顾客冲突与赔偿
-- 角色分工：CEO Agent David 主驾驶；Human 法人徐大伟处理高风险/法定动作；Auditor 做数学验证
-- 子 Agent：Sales/QC/Refund/Complaint/Logistics 全部写入同一不可篡改账本
+- 场景版本：`3.3.0`
+- 覆盖 2025 Q1 + Q2：采购、收货、销售、退款、过期报损、供应商切换、顾客冲突与赔偿
+- 角色分工：CEO Agent David 主驾驶；Human 法人徐大伟只处理法定/高风险动作；Auditor 负责数学验证
+- 子 Agent（Sales/QC/Refund/Complaint/Logistics）全部写入同一不可篡改账本
+
+示例灵魂文件（只是示例资产，不是核心代码）放在：
+- `examples/transparent_supermarket/`
 
 默认披露层级与指标（当前版本）：
 - 披露粒度：`day` + `week` + `month`（同一故事同时输出）
@@ -199,17 +206,17 @@ python -m app.cli agent run "skill:disclosure 披露昨日汇总 粒度=日"
 - 指标覆盖：收入、退款率、客单价、复购率、库存周转天数、滞销 SKU 占比、质检不合格率、投诉闭环时长、经营现金净流入、供应商账期结构
 
 **一句话（奶奶版）**
-把公司想成一个透明小菜店：
-- David 和一群小助手 agent 每天干活（进货、卖货、收钱、发货、退钱）
-- 店主（Human）只管高风险大事（签合同、银行指令、线下调解）
-- 每一步都有电子签名和“指纹封条”，任何人都能核验历史没被改过
+这不是“把公司全裸公开”，而是：
+- 日常业务由 David 和子 Agent 自动跑
+- 高风险动作由人类法人把关
+- 对外披露给汇总和证明（Merkle + 签名 + immudb 封条），别人能验真，但看不到不该公开的隐私
 
 查看默认故事：
 ```bash
 curl http://localhost:8000/demo/default/story
 ```
 
-公开层“汇总/全明细”可选（用户选择）：
+公开层“汇总/全明细”可选（由用户决定）：
 ```bash
 # 汇总模式（默认，隐藏客户与银行对手方明细）
 curl "http://localhost:8000/demo/default/story?detail_level=summary"
@@ -404,6 +411,7 @@ At the core, Claude Code makes a model runnable in an operating system; Transpar
 - `/Users/a/repos/transparent-company/.github/ISSUE_TEMPLATE/` (bilingual issue templates)
 - `/Users/a/repos/transparent-company/.github/pull_request_template.md` (PR template)
 - Reference: [GitHub Docs: Customizing your repository](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository)
+- `/Users/a/repos/transparent-company/docs/PRODUCT_UPDATE_PLAN.md` (product gap analysis and roadmap)
 
 ### Architecture Layers
 - `app/ledger/*`: event schema, canonical JSON, signing, Merkle, anchoring, receipt hashing
@@ -456,7 +464,8 @@ app/
 skills/
 scripts/
 tests/
-transparent_supermarket/
+docs/
+examples/transparent_supermarket/
 .github/
   ISSUE_TEMPLATE/
   pull_request_template.md
@@ -534,13 +543,18 @@ python -m app.cli agent run "skill:disclosure 披露昨日汇总 粒度=日"
 
 See `SKILLS.md` for authoring rules.
 
-### End-to-End Demo
-On startup, the stack auto-bootstraps the default storyline (`TC_BOOTSTRAP_DEMO_ON_STARTUP=true`):
+### End-to-End Demo (Default Example)
+This repository is the **Transparent Company platform**. It is not limited to supermarket operations.
+
+The built-in demo is **David Transparent Supermarket (two-quarter storyline)**, used to demonstrate verifiable operations end to end:
 - Scenario ID: `david_transparent_supermarket_q1_q2_story_v4`
-- Scenario version: `3.2.0`
-- Covers two quarters (2025 Q1 + Q2): procurement, receiving, sales, refunds, expiration loss, supplier switch, customer conflict, compensation
-- Role split: CEO Agent David as primary driver, Human legal representative for high-risk/legal actions, Auditor for math-based verification
-- Sub-agents (Sales/QC/Refund/Complaint/Logistics) all write to the same immutable ledger
+- Scenario version: `3.3.0`
+- Covers 2025 Q1 + Q2: procurement, receiving, sales, refunds, expiration loss, supplier switch, customer conflict, compensation
+- Role split: CEO Agent David as primary driver; human legal representative handles legal/high-risk actions; auditor verifies by math
+- Sub-agents (Sales/QC/Refund/Complaint/Logistics) all write into the same immutable ledger
+
+Example soul assets (sample content, not core runtime code) are located at:
+- `examples/transparent_supermarket/`
 
 Default disclosure scope (current build):
 - Granularity: `day` + `week` + `month` from the same storyline
@@ -548,10 +562,10 @@ Default disclosure scope (current build):
 - KPI set: revenue, refund rate, average order value, repeat purchase rate, inventory turnover days, slow-moving SKU ratio, QC fail rate, complaint resolution hours, operating cash net inflow, supplier payment-term structure
 
 **Grandma-friendly explanation**
-Think of this like a transparent grocery shop:
-- David and helper agents do daily operations (buy, sell, collect cash, ship, refund)
-- The human owner only handles risky/legal tasks (contracts, bank instructions, on-site mediation)
-- Every step is signed and sealed, so anyone can verify history was not modified
+This is not “expose every private detail.” It means:
+- Daily operations are run by David + sub-agents
+- High-risk/legal actions are gated by a human legal representative
+- External users get summaries + proofs (Merkle + signature + immudb anchor) to verify truth without exposing private data
 
 Inspect the default storyline:
 ```bash
