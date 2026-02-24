@@ -204,6 +204,12 @@ def add_message(session_id: str, request: MessageAddRequest) -> dict:
     return {"status": "ok", "result": result}
 
 
+@app.post("/api/v1/sessions/{session_id}/add_message")
+def add_message_alias(session_id: str, request: MessageAddRequest) -> dict:
+    result = store.add_message(session_id=session_id, role=request.role, content=request.content)
+    return {"status": "ok", "result": result}
+
+
 @app.post("/api/v1/sessions/{session_id}/commit")
 def commit_session(session_id: str) -> dict:
     result = store.commit(session_id)

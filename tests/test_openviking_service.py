@@ -21,12 +21,19 @@ def test_openviking_service_session_message_commit_search(tmp_path, monkeypatch)
     assert created.status_code == 200
     assert created.json()["result"]["session_id"] == "sess-demo-001"
 
-    added = client.post(
-        "/api/v1/sessions/sess-demo-001/messages",
+    added_alias = client.post(
+        "/api/v1/sessions/sess-demo-001/add_message",
         json={"role": "assistant", "content": "决策：先守住现金流再扩张"},
     )
+    assert added_alias.status_code == 200
+    assert added_alias.json()["result"]["message_count"] == 1
+
+    added = client.post(
+        "/api/v1/sessions/sess-demo-001/messages",
+        json={"role": "user", "content": "今天先控制采购节奏"},
+    )
     assert added.status_code == 200
-    assert added.json()["result"]["message_count"] == 1
+    assert added.json()["result"]["message_count"] == 2
 
     committed = client.post("/api/v1/sessions/sess-demo-001/commit", json={})
     assert committed.status_code == 200

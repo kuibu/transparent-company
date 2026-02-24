@@ -47,10 +47,27 @@ class AgentMemoryBackend(Protocol):
 class OpenVikingHTTPMemoryBackend:
     backend_name = "openviking_http"
 
+    # Official-first intent: try add_message path first, then compat fallback path.
+    MESSAGE_PATH_TEMPLATES = (
+        "/api/v1/sessions/{session_id}/add_message",
+        "/api/v1/sessions/{session_id}/messages",
+    )
+    SEARCH_PATHS = (
+        "/api/v1/search/search",
+        "/api/v1/search/find",
+    )
+    _COMPATIBLE_FALLBACK_STATUSES = {404, 405, 422}
+
     def __init__(self, settings: Settings | None = None):
         self.settings = settings or get_settings()
-        self.base_url = self.settings.openviking_base_url.rstrip("/")
+        self.primary_base_url = self.settings.openviking_base_url.rstrip("/")
+        self.fallback_base_url = (
+            self.settings.openviking_fallback_base_url.rstrip("/") if self.settings.openviking_fallback_base_url else None
+        )
+        self._active_base_url = self.primary_base_url
         self.timeout = max(1, self.settings.openviking_timeout_seconds)
+        self._resolved_message_path_template: str | None = None
+        self._resolved_search_path: str | None = None
 
     def _headers(self) -> dict[str, str]:
         headers = {"Content-Type": "application/json"}
@@ -58,8 +75,23 @@ class OpenVikingHTTPMemoryBackend:
             headers["X-API-Key"] = self.settings.openviking_api_key
         return headers
 
-    def _request(self, method: str, path: str, *, json_body: dict[str, Any] | None = None) -> dict[str, Any]:
-        url = f"{self.base_url}{path}"
+    def _candidate_base_urls(self) -> list[str]:
+        values = [self._active_base_url, self.primary_base_url, self.fallback_base_url]
+        urls: list[str] = []
+        for value in values:
+            if value and value not in urls:
+                urls.append(value)
+        return urls
+
+    def _request_once(
+        self,
+        base_url: str,
+        method: str,
+        path: str,
+        *,
+        json_body: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        url = f"{base_url}{path}"
         with httpx.Client(timeout=self.timeout) as client:
             response = client.request(method, url, headers=self._headers(), json=json_body)
         response.raise_for_status()
@@ -68,12 +100,38 @@ class OpenVikingHTTPMemoryBackend:
             return payload
         return {"result": payload}
 
+    def _request(self, method: str, path: str, *, json_body: dict[str, Any] | None = None) -> dict[str, Any]:
+        last_exc: Exception | None = None
+        for base_url in self._candidate_base_urls():
+            try:
+                payload = self._request_once(base_url, method, path, json_body=json_body)
+                self._active_base_url = base_url
+                return payload
+            except Exception as exc:  # pragma: no cover - behavior validated via public methods
+                last_exc = exc
+        if last_exc is not None:
+            raise last_exc
+        raise RuntimeError("openviking request failed: no base url configured")
+
     @staticmethod
     def _unwrap(payload: dict[str, Any]) -> dict[str, Any]:
         result = payload.get("result")
         if isinstance(result, dict):
             return result
         return payload
+
+    @staticmethod
+    def _extract_resources(result: dict[str, Any]) -> list[dict[str, Any]]:
+        direct = result.get("resources")
+        if isinstance(direct, list):
+            return [row for row in direct if isinstance(row, dict)]
+
+        merged: list[dict[str, Any]] = []
+        for key in ("memories", "resources", "skills"):
+            rows = result.get(key)
+            if isinstance(rows, list):
+                merged.extend([row for row in rows if isinstance(row, dict)])
+        return merged
 
     def health(self) -> MemoryBackendHealth:
         try:
@@ -99,43 +157,95 @@ class OpenVikingHTTPMemoryBackend:
         return str(session_id)
 
     def add_message(self, session_id: str, role: str, content: str) -> dict[str, Any]:
-        raw = self._request(
-            "POST",
-            f"/api/v1/sessions/{session_id}/messages",
-            json_body={"role": role, "content": content},
-        )
-        return self._unwrap(raw)
+        payload = {"role": role, "content": content}
+
+        if self._resolved_message_path_template:
+            resolved_path = self._resolved_message_path_template.format(session_id=session_id)
+            try:
+                raw = self._request("POST", resolved_path, json_body=payload)
+                return self._unwrap(raw)
+            except httpx.HTTPStatusError as exc:
+                if exc.response.status_code in self._COMPATIBLE_FALLBACK_STATUSES:
+                    self._resolved_message_path_template = None
+                else:
+                    raise
+
+        last_exc: Exception | None = None
+        for path_template in self.MESSAGE_PATH_TEMPLATES:
+            path = path_template.format(session_id=session_id)
+            try:
+                raw = self._request("POST", path, json_body=payload)
+                self._resolved_message_path_template = path_template
+                return self._unwrap(raw)
+            except httpx.HTTPStatusError as exc:
+                last_exc = exc
+                if exc.response.status_code in self._COMPATIBLE_FALLBACK_STATUSES:
+                    continue
+                raise
+            except Exception as exc:
+                last_exc = exc
+                continue
+
+        if last_exc is not None:
+            raise last_exc
+        raise RuntimeError("openviking add_message failed")
 
     def commit(self, session_id: str) -> dict[str, Any]:
         raw = self._request("POST", f"/api/v1/sessions/{session_id}/commit", json_body={})
         return self._unwrap(raw)
 
     def search(self, query: str, session_id: str, limit: int = 5) -> list[MemorySearchHit]:
-        raw = self._request(
-            "POST",
-            "/api/v1/search/search",
-            json_body={"query": query, "session_id": session_id, "limit": limit},
-        )
-        result = self._unwrap(raw)
-        resources = result.get("resources", []) if isinstance(result, dict) else []
+        payload = {"query": query, "session_id": session_id, "limit": limit}
 
+        if self._resolved_search_path:
+            try:
+                raw = self._request("POST", self._resolved_search_path, json_body=payload)
+                result = self._unwrap(raw)
+                resources = self._extract_resources(result) if isinstance(result, dict) else []
+                return self._to_hits(resources)
+            except httpx.HTTPStatusError as exc:
+                if exc.response.status_code in self._COMPATIBLE_FALLBACK_STATUSES:
+                    self._resolved_search_path = None
+                else:
+                    raise
+
+        last_exc: Exception | None = None
+        for path in self.SEARCH_PATHS:
+            try:
+                raw = self._request("POST", path, json_body=payload)
+                result = self._unwrap(raw)
+                resources = self._extract_resources(result) if isinstance(result, dict) else []
+                self._resolved_search_path = path
+                return self._to_hits(resources)
+            except httpx.HTTPStatusError as exc:
+                last_exc = exc
+                if exc.response.status_code in self._COMPATIBLE_FALLBACK_STATUSES:
+                    continue
+                raise
+            except Exception as exc:
+                last_exc = exc
+                continue
+
+        if last_exc is not None:
+            raise last_exc
+        return []
+
+    @staticmethod
+    def _to_hits(resources: list[dict[str, Any]]) -> list[MemorySearchHit]:
         hits: list[MemorySearchHit] = []
-        if isinstance(resources, list):
-            for item in resources:
-                if not isinstance(item, dict):
-                    continue
-                text = str(item.get("abstract") or item.get("content") or item.get("uri") or "")
-                if not text:
-                    continue
-                score = item.get("score")
-                hits.append(
-                    MemorySearchHit(
-                        text=text,
-                        score=float(score) if isinstance(score, (int, float)) else None,
-                        uri=item.get("uri"),
-                        metadata=item,
-                    )
+        for item in resources:
+            text = str(item.get("abstract") or item.get("content") or item.get("uri") or "")
+            if not text:
+                continue
+            score = item.get("score")
+            hits.append(
+                MemorySearchHit(
+                    text=text,
+                    score=float(score) if isinstance(score, (int, float)) else None,
+                    uri=item.get("uri"),
+                    metadata=item,
                 )
+            )
         return hits
 
 

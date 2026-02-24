@@ -162,7 +162,7 @@ docker compose up -d --build
 - 默认看板: `http://localhost:8088/superset/dashboard/david-transparent-supermarket-story/`
 - MinIO Console: `http://localhost:9001`（`minioadmin/minioadmin`）
 - immudb gRPC: `localhost:3322`
-- OpenViking API: `http://localhost:1933`
+- OpenViking API (compat default): `http://localhost:1933`; official profile: `http://localhost:1934`
 
 ### 常用运维命令
 ```bash
@@ -188,16 +188,19 @@ OpenViking 开源项目：`https://github.com/volcengine/openviking`
 
 默认配置：
 - `TC_AGENT_MEMORY_BACKEND=openviking_http`
-- `TC_OPENVIKING_BASE_URL=http://openviking:1933`
+- `TC_OPENVIKING_BASE_URL=http://openviking-official:1933`
+- `TC_OPENVIKING_FALLBACK_BASE_URL=http://openviking-compat:1933`
 - `TC_OPENVIKING_AUTO_COMMIT=true`
 - `TC_OPENVIKING_FALLBACK_LOCAL=true`
 
 说明：
-- `docker-compose.yml` 已内置 `openviking` 服务，默认地址为 `http://openviking:1933`。
-- 当前仓库运行的是 OpenViking-compatible HTTP service（接口兼容层），用于开箱即用；如需切到官方 OpenViking 实例，可仅替换 `TC_OPENVIKING_BASE_URL`。
-- `app` 会在 `openviking` 健康后启动，默认直接使用 OpenViking 记忆后端。
+- `docker-compose.yml` 现内置两层 OpenViking 服务：`openviking-official`（官方镜像，profile 可选）+ `openviking-compat`（本仓库兼容层兜底）。
+- 默认策略为“官方优先 + 兼容回退”：先访问 `TC_OPENVIKING_BASE_URL`，失败后自动回退 `TC_OPENVIKING_FALLBACK_BASE_URL`。
+- `app` 默认依赖 `openviking-compat` 健康启动；如启用 `openviking-official` profile，会优先走官方服务。
 - 若 OpenViking 临时不可达，系统仍会自动回退到本地记忆后端，不影响 API 使用。
-- 当前实现对接 OpenViking HTTP 接口族：`/health`、`/api/v1/sessions`、`/messages`、`/commit`、`/search`。
+- 当前实现对接 OpenViking HTTP 接口族：`/health`、`/api/v1/sessions`、`/add_message`/`/messages`、`/commit`、`/search`。
+- 启用官方服务（可选）：`docker compose --profile openviking-official up -d openviking-official`。
+- 若官方镜像拉取报 `unauthorized`，请先 `docker login ghcr.io`，或继续使用 `openviking-compat`。
 
 ### API 鉴权（新增）
 敏感接口不再信任 `X-Actor-Type` 头，而是使用 API Key 身份映射：
@@ -562,7 +565,7 @@ Endpoints:
 - Default dashboard: `http://localhost:8088/superset/dashboard/david-transparent-supermarket-story/`
 - MinIO Console: `http://localhost:9001` (`minioadmin/minioadmin`)
 - immudb gRPC: `localhost:3322`
-- OpenViking API: `http://localhost:1933`
+- OpenViking API (compat default): `http://localhost:1933`; official profile: `http://localhost:1934`
 
 ### Common Ops Commands
 ```bash
@@ -588,16 +591,19 @@ This repo now includes a memory-aware agent conversation layer (HTTP API) so a C
 
 Default config:
 - `TC_AGENT_MEMORY_BACKEND=openviking_http`
-- `TC_OPENVIKING_BASE_URL=http://openviking:1933`
+- `TC_OPENVIKING_BASE_URL=http://openviking-official:1933`
+- `TC_OPENVIKING_FALLBACK_BASE_URL=http://openviking-compat:1933`
 - `TC_OPENVIKING_AUTO_COMMIT=true`
 - `TC_OPENVIKING_FALLBACK_LOCAL=true`
 
 Notes:
-- `docker-compose.yml` now includes a built-in `openviking` service (default: `http://openviking:1933`).
-- This repository runs an OpenViking-compatible HTTP service out of the box; to use an official OpenViking deployment, only change `TC_OPENVIKING_BASE_URL`.
-- The `app` service waits for OpenViking health and uses it as the default memory backend.
+- `docker-compose.yml` now ships a dual OpenViking setup: `openviking-official` (official image, optional profile) + `openviking-compat` (repo-local compatibility fallback).
+- Default policy is "official-first + compatibility fallback": try `TC_OPENVIKING_BASE_URL` first, then automatically fall back to `TC_OPENVIKING_FALLBACK_BASE_URL` on failure.
+- The `app` service depends on `openviking-compat` for startup; if `openviking-official` profile is enabled, requests still prefer the official service.
 - If OpenViking is temporarily unavailable, the system automatically falls back to local memory.
-- Current integration covers OpenViking HTTP endpoints: `/health`, `/api/v1/sessions`, `/messages`, `/commit`, `/search`.
+- Current integration covers OpenViking HTTP endpoints: `/health`, `/api/v1/sessions`, `/add_message`/`/messages`, `/commit`, `/search`.
+- Enable official service (optional): `docker compose --profile openviking-official up -d openviking-official`.
+- If pulling the official image returns `unauthorized`, run `docker login ghcr.io` first, or continue with `openviking-compat`.
 
 ### API Authentication (New)
 Sensitive endpoints no longer trust `X-Actor-Type`; they use API key identity mapping:

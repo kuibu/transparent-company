@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     # Agent memory backend: openviking_http | local
     agent_memory_backend: str = "openviking_http"
     openviking_base_url: str = "http://openviking:1933"
+    openviking_fallback_base_url: str | None = None
     openviking_api_key: str | None = None
     openviking_timeout_seconds: int = 15
     openviking_auto_commit: bool = True
